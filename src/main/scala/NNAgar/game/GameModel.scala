@@ -5,12 +5,12 @@ import scala.util.Random
 
 object GameModel {
 
-  case class GameParams(initialSize: Double = 10d,
+  case class GameParams(initialSize: Double = 100d,
                         tickTime: Double = 1.0 / 60.0,
-                        sizePerFood: Double = 1.0,
+                        sizePerFood: Double = 30.0,
                         foodPerTick: Double = 0.1,
                         area: V2 = V2(1000, 1000),
-                        speed: Double => Double = size => 20,
+                        speed: Double => Double = size => 100,
                         seed: Int = new Random().nextInt())
 
   case class Player(id: Int,

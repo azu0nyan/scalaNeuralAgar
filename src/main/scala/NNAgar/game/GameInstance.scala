@@ -29,6 +29,8 @@ class GameInstance(p: GameParams = GameParams()) {
         g = g.copy(alivePlayers = g.alivePlayers.updated(pId, np))
   }
 
+  def player(id: Int): Player = g.alivePlayers.find(_.id == id).getOrElse(g.deadPlayers.find(_.id == id).get)
+
   def update(): Unit = {
     println(s"Tick ${g.tick} players alive: ${g.alivePlayers.size}")
     val foodLeft = g.food.filter(f => !g.alivePlayers.exists(_.contains(f)))
@@ -45,7 +47,7 @@ class GameInstance(p: GameParams = GameParams()) {
         case ((alive, dead), canBeEaten) => alive.find(a => a.intersects(canBeEaten)) match
           case Some(eater) =>
             val eaterId = alive.indexOf(eater)
-            val nA = alive.updated(eaterId, eater.copy(size = alive.size + canBeEaten.size))
+            val nA = alive.updated(eaterId, eater.copy(size = eater.size + canBeEaten.size))
 
             (nA, dead :+ canBeEaten.copy(deadAt = Some(g.tick)))
           case None => (alive :+ canBeEaten, dead)
@@ -60,7 +62,7 @@ class GameInstance(p: GameParams = GameParams()) {
 
   def draw(gr: Graphics2D): Unit = {
     gr.setColor(Color.GREEN)
-    for (f <- g.food) gr.fillOval(f.x.toInt - 5, f.x.toInt - 5, 10, 10)
+    for (f <- g.food) gr.fillOval(f.x.toInt - 5, f.y.toInt - 5, 10, 10)
 
 
     gr.setColor(Color.RED)
