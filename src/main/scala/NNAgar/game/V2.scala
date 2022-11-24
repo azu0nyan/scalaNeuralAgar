@@ -1,4 +1,4 @@
-package Main.game
+package NNAgar.game
 
 case class V2(x: Double, y: Double) {
   def +(o: V2): V2 = V2(x + o.x, y + o.y)
