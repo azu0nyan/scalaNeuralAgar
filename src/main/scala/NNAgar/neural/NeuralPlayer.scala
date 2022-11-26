@@ -1,20 +1,28 @@
 package NNAgar.neural
 
-import NNAgar.game.GameModel.Game
+import NNAgar.game.GameModel.{Game, Player}
 import NNAgar.game.{GameInstance, Helpers, V2}
+import NNAgar.neural.GenomeOps.Genome
 
-class NeuralPlayer(gameInstance: GameInstance,
-                   neuralNet: NeuralNet,
-                   neuralInputForPlayer: (Game, Int) => IndexedSeq[Double],
-                   outputToAction: (GameInstance, Seq[Double]) => Unit
+object NeuralPlayer{
+  
+}
+
+class NeuralPlayer(val gameInstance: GameInstance,
+                   val genome: Genome,
+                   val neuralNet: NeuralNet,
+                   val vision: (Game, Int) => IndexedSeq[Double],
+                   val control: (GameInstance, Int, IndexedSeq[Double]) => Unit
                   ) {
 
   val pId: Int = gameInstance.spawnPlayer()
   def tick(): Unit = {
-    if (gameInstance.player(pId).alive) {
-      val input = neuralInputForPlayer(gameInstance.g, pId)
+    if (player.alive) {
+      val input = vision(gameInstance.g, pId)
       val nnOut = neuralNet.calculate(input)
-      outputToAction(gameInstance, nnOut)
+      control(gameInstance, pId, nnOut)
     }
   }
+  
+  def player: Player = gameInstance.player(pId)
 }

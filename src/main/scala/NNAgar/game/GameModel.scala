@@ -29,13 +29,18 @@ object GameModel {
     def intersects(ot: Player): Boolean = (pos - ot.pos).length < rad
     
     def alive: Boolean = deadAt.isEmpty
+    
+    
   }
 
   case class Game(params: GameParams = GameParams(),
                   alivePlayers: Seq[Player] = Seq(),
                   food: Seq[V2] = Seq(),
                   tick: Int = 0,
-                  deadPlayers: Seq[Player] = Seq())
+                  deadPlayers: Seq[Player] = Seq()){
+    
+    def player(id:Int): Player = alivePlayers.find(_.id == id).getOrElse(deadPlayers.find(_.id == id).get)
+  }
 
 
 

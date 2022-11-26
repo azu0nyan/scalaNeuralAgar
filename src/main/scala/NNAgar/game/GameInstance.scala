@@ -29,9 +29,9 @@ class GameInstance(p: GameParams = GameParams()) {
         g = g.copy(alivePlayers = g.alivePlayers.updated(pId, np))
   }
 
-  def player(id: Int): Player = g.alivePlayers.find(_.id == id).getOrElse(g.deadPlayers.find(_.id == id).get)
+  def player(id: Int): Player = g.player(id)
 
-  def update(): Unit = {
+  def tick(): Unit = {
     println(s"Tick ${g.tick} players alive: ${g.alivePlayers.size}")
     val foodLeft = g.food.filter(f => !g.alivePlayers.exists(_.contains(f)))
     val af = for (p <- g.alivePlayers) yield

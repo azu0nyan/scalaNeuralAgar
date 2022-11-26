@@ -58,4 +58,8 @@ object GenomeOps {
     }
     res.toString()
   }
+
+  def neuralNetFromGenome(g: Genome, str: NeuralNetStructure, bitsPerGene:Int = 8, conv: Int => Double): NeuralNet = {
+    NeuralNet(str.layerSizes, toGenes(g, conv, bitsPerGene), str.activation)
+  }
 }

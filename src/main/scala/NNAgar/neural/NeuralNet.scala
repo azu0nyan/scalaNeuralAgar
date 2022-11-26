@@ -5,6 +5,9 @@ def logisticCurve(x: Double): Double = 1d / (1d + math.exp(-x))
 
 
 trait NeuralNetStructure {
+
+  def activation: Double => Double
+
   def layerSizes: IndexedSeq[Int]
 
   val layerCount: Int = layerSizes.length
@@ -29,14 +32,14 @@ trait NeuralNetStructure {
     layerSunapseBegin(prevLayerId) + layerSizes(prevLayerId) * neuronInLayerId + prevNeuronInLayerId
 }
 
-case class NeuralNetStructureImpl(layerSizes: IndexedSeq[Int]) extends NeuralNetStructure
+case class NeuralNetStructureImpl(layerSizes: IndexedSeq[Int], activation: Double => Double = x => x) extends NeuralNetStructure
 
 trait NeuralNetCalculator extends NeuralNetStructure {
   def neurons: IndexedSeq[Double]
   def synapses: IndexedSeq[Double]
-  def activation: Double => Double
 
-  def calculate(in: Seq[Double]): Seq[Double] = {
+
+  def calculate(in: Seq[Double]): IndexedSeq[Double] = {
     val calculated = Array.ofDim[Double](neuronCount)
     for (i <- in.indices) calculated(i) = in(i)
 
@@ -61,10 +64,11 @@ object NeuralNet {
   def apply(layerSizes: IndexedSeq[Int],
             neuronAndSynapses: IndexedSeq[Double],
             activation: Double => Double): NeuralNet = {
-    val nc = NeuralNetStructureImpl(layerSizes).neuronCount
+    val struct = NeuralNetStructureImpl(layerSizes)
+    val nc = struct.workingNeurons
 
     NeuralNet(layerSizes,
-      neuronAndSynapses.take(nc),
+      IndexedSeq.fill(struct.layerSizes.head)(0d) ++ neuronAndSynapses.take(nc),
       neuronAndSynapses.drop(nc),
       activation)
   }
