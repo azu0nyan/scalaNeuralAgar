@@ -51,7 +51,7 @@ trait NeuralNetCalculator extends NeuralNetStructure {
          s = (for (prevLayerNeuron <- 0 until layerSizes(layer - 1);
                    linkedNeuron = calculated(prevLayerNeuronOffset + prevLayerNeuron);
                    synapse = synapses(synapseId(layer - 1, prevLayerNeuron, neuronInLayer))
-                   ) yield linkedNeuron * synapse).sum;
+                   ) yield linkedNeuron * synapse).sum + bias;
          y = activation(s)
          ) calculated(nId) = y
 

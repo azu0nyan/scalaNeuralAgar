@@ -5,10 +5,11 @@ import NNAgar.game.GameModel.Game
 import NNAgar.neural.GenomeOps.Genome
 
 import scala.collection.mutable
+import scala.util.Random
 
 
 case class GeneticSorterParams(
-                                targetPlayers: Int = 20,
+                                targetPlayers: Int = 50,
                                 neuralNetStructure: NeuralNetStructure = NeuralNetStructureImpl(IndexedSeq(27, 12, 12, 4), logisticCurve),
                                 bitPerGene: Int = 8,
                                 conv: Int => Double = x => (x - 128) / 128.0 ,
@@ -45,10 +46,12 @@ class GeneticSorter(params: GeneticSorterParams = GeneticSorterParams()) {
     gameInstance.tick()
 
     for(i <- 0 until (params.targetPlayers - players.count(_.player.alive))){
-      val ab = players.sortBy(p => params.fitnessFunction(gameInstance.g, p.pId))
+      val ab = players.sortBy(p => params.fitnessFunction(gameInstance.g, p.pId)).take(20)
 
-      val parent1 = ab(0)
-      val parent2 = ab(1)
+      val r = new Random()
+      val parent1 = ab(r.nextInt(20))
+      val parent2 = ab(r.nextInt(20))
+
       val g = GenomeOps.mix(parent1.genome, parent2.genome)
       val gg = GenomeOps.flipRandomBits(g, 10)
 

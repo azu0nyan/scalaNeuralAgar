@@ -2,7 +2,7 @@ package NNAgar.game
 
 import NNAgar.game.GameModel.*
 
-import java.awt.{Color, Graphics2D}
+import java.awt.{Color, Font, Graphics2D}
 
 class GameInstance(p: GameParams = GameParams()) {
 
@@ -37,13 +37,14 @@ class GameInstance(p: GameParams = GameParams()) {
     val af = for (p <- g.alivePlayers) yield
       p.copy(size = p.size + g.params.sizePerFood * g.food.count(p.contains))
 
-    val (newAlive, newDead) = af
+    val (newAliveT, newDeadT) = af
       .map { p =>
         val tryPos = p.pos  + p.dir * g.params.tickTime * g.params.speed(p.size)
         val newPos = V2(math.max(0, math.min(g.params.area.x, tryPos.x)), math.max(0, math.min(g.params.area.y, tryPos.y)))
+        val dmg = (newPos - tryPos).length
 
         p.copy(pos = newPos,
-          distanceTraveled = p.distanceTraveled + (p.pos - newPos).length)
+          distanceTraveled = p.distanceTraveled + (p.pos - newPos).length, size = math.max(0, p.size - dmg - g.params.dSizePerTick))
       }.sortBy(-_.size)
       .foldLeft((Seq[Player](), Seq[Player]())) {
         case ((alive, dead), canBeEaten) => alive.find(a => a.intersects(canBeEaten)) match
@@ -54,6 +55,8 @@ class GameInstance(p: GameParams = GameParams()) {
             (nA, dead :+ canBeEaten.copy(deadAt = Some(g.tick)))
           case None => (alive :+ canBeEaten, dead)
       }
+    val (newAlive, moreDead) = newAliveT.partition(p => p.size >0)
+    val newDead = newDeadT ++ moreDead.map(_.copy(deadAt = Some(g.tick)))
 
     g = g.copy(alivePlayers = newAlive,
       deadPlayers = g.deadPlayers ++ newDead,
@@ -90,6 +93,11 @@ class GameInstance(p: GameParams = GameParams()) {
       gr.setColor(new Color(255, 0, 0))
       gr.fillOval(p.pos.x.toInt - p.rad.ceil.toInt, p.pos.y.toInt - p.rad.ceil.toInt,
         p.rad.ceil.toInt * 2, p.rad.ceil.toInt * 2)
+
+      gr.setColor(new Color(255, 255, 255))
+      gr.setFont(new Font("", Font.BOLD, 12))
+      gr.drawString(p.id.toInt.toString + " " + p.size.toInt.toString,  p.pos.x.toInt, p.pos.y.toInt)
+
 
 
     }
