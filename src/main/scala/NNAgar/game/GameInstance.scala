@@ -32,16 +32,18 @@ class GameInstance(p: GameParams = GameParams()) {
   def player(id: Int): Player = g.player(id)
 
   def tick(): Unit = {
-    println(s"Tick ${g.tick} players alive: ${g.alivePlayers.size}")
+    //println(s"Tick ${g.tick} players alive: ${g.alivePlayers.size}")
     val foodLeft = g.food.filter(f => !g.alivePlayers.exists(_.contains(f)))
     val af = for (p <- g.alivePlayers) yield
       p.copy(size = p.size + g.params.sizePerFood * g.food.count(p.contains))
 
     val (newAlive, newDead) = af
       .map { p =>
-        val posDelta = p.dir * g.params.tickTime * g.params.speed(p.size)
-        p.copy(pos = p.pos + posDelta,
-          distanceTraveled = p.distanceTraveled + posDelta.length)
+        val tryPos = p.pos  + p.dir * g.params.tickTime * g.params.speed(p.size)
+        val newPos = V2(math.max(0, math.min(g.params.area.x, tryPos.x)), math.max(0, math.min(g.params.area.y, tryPos.y)))
+
+        p.copy(pos = newPos,
+          distanceTraveled = p.distanceTraveled + (p.pos - newPos).length)
       }.sortBy(-_.size)
       .foldLeft((Seq[Player](), Seq[Player]())) {
         case ((alive, dead), canBeEaten) => alive.find(a => a.intersects(canBeEaten)) match

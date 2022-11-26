@@ -9,13 +9,12 @@ class GameWindow(preDraw: => Unit = {}, draw: Graphics2D => Unit, var fps: Int  
     val jf = new JFrame()
     jf.setSize(w, h); //размер экрана
     jf.setUndecorated(false); //показать заголовок окна
-    jf.setTitle("Neutral Agar");
+    jf.setTitle("Neural Agar");
     jf.setVisible(true);
     jf.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
     jf.createBufferStrategy(2);
 
     def loop():Unit = {
-
       new Thread(() => {
         Thread.sleep(500)
         jf.setSize(w - 1, h )

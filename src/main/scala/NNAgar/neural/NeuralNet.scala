@@ -47,11 +47,11 @@ trait NeuralNetCalculator extends NeuralNetStructure {
          prevLayerNeuronOffset = layerNeuronBegin(layer - 1);
          neuronInLayer <- 0 until layerSizes(layer);
          nId = neuronId(layer, neuronInLayer);
-         c0 = neurons(nId);
+         bias = neurons(nId);
          s = (for (prevLayerNeuron <- 0 until layerSizes(layer - 1);
                    linkedNeuron = calculated(prevLayerNeuronOffset + prevLayerNeuron);
                    synapse = synapses(synapseId(layer - 1, prevLayerNeuron, neuronInLayer))
-                   ) yield linkedNeuron * synapse).sum + c0;
+                   ) yield linkedNeuron * synapse).sum;
          y = activation(s)
          ) calculated(nId) = y
 

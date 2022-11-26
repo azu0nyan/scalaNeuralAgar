@@ -9,9 +9,9 @@ import scala.collection.mutable
 
 case class GeneticSorterParams(
                                 targetPlayers: Int = 20,
-                                neuralNetStructure: NeuralNetStructure = NeuralNetStructureImpl(IndexedSeq(2, 2), logisticCurve),
+                                neuralNetStructure: NeuralNetStructure = NeuralNetStructureImpl(IndexedSeq(27, 12, 12, 4), logisticCurve),
                                 bitPerGene: Int = 8,
-                                conv: Int => Double = x => x / 255.0,
+                                conv: Int => Double = x => (x - 128) / 128.0 ,
                                 playerVision: (Game, Int) => IndexedSeq[Double] = GameToNeuralOps.playerVision,
                                 playerControl: (GameInstance,Int, IndexedSeq[Double] ) => Unit = GameToNeuralOps.playerControl,
                                 fitnessFunction: (Game, Int) => Double = GameToNeuralOps.fitnessFunction
@@ -26,9 +26,11 @@ class GeneticSorter(params: GeneticSorterParams = GeneticSorterParams()) {
 
   val players: mutable.Buffer[NeuralPlayer] = mutable.Buffer()
 
-  def spawn(genome: Genome): Unit = {
+  def spawn(genome: Genome): Int = {
     val nn = GenomeOps.neuralNetFromGenome(genome, params.neuralNetStructure, params.bitPerGene, params.conv)
-    players += new NeuralPlayer(gameInstance, genome, nn, params.playerVision, params.playerControl)
+    val np = new NeuralPlayer(gameInstance, genome, nn, params.playerVision, params.playerControl)
+    players += np
+    np.pId
   }
 
   def init(): Unit = {
@@ -44,8 +46,15 @@ class GeneticSorter(params: GeneticSorterParams = GeneticSorterParams()) {
 
     for(i <- 0 until (params.targetPlayers - players.count(_.player.alive))){
       val ab = players.sortBy(p => params.fitnessFunction(gameInstance.g, p.pId))
-      val g = GenomeOps.mix(ab(0).genome, ab(1).genome)
-      spawn(g)
+
+      val parent1 = ab(0)
+      val parent2 = ab(1)
+      val g = GenomeOps.mix(parent1.genome, parent2.genome)
+      val gg = GenomeOps.flipRandomBits(g, 10)
+
+
+      val newId = spawn(gg)
+      println(s"Mixing ${parent1.pId}:${params.fitnessFunction(gameInstance.g, parent1.pId)} and ${parent2.pId}:${params.fitnessFunction(gameInstance.g, parent2.pId)} spawned $newId")
     }
   }
 
