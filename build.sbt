@@ -7,5 +7,5 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.14" % "test"
 
 lazy val root = (project in file("."))
   .settings(
-    name := "scalaNuralAgar"
+    name := "scalaNeuralAgar"
   )

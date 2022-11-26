@@ -27,6 +27,8 @@ object GameModel {
     def contains(v: V2): Boolean = (pos - v).length < rad
 
     def intersects(ot: Player): Boolean = (pos - ot.pos).length < rad
+    
+    def alive: Boolean = deadAt.isEmpty
   }
 
   case class Game(params: GameParams = GameParams(),

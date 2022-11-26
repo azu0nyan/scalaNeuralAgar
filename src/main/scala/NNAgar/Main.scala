@@ -16,20 +16,16 @@ object Main {
 
   def main(args: Array[String]): Unit = {
     val g = new GameInstance()
-    val nps = for(i <- 0 until 20) yield  new NeuralPlayer(g)
-    for(i <- 0 until 100) g.spawnFood()
-
+//    val nps = for(i <- 0 until 20) yield  new NeuralPlayer(g)
+//    for(i <- 0 until 100) g.spawnFood()
+//
     var cp : ControllablePlayer = null
     val window = new GameWindow(preDraw = {
-      nps.foreach(_.tick())
+//      nps.foreach(_.tick())
       g.update()
       println(Try(g.player(cp.id).size))
     }, draw = g.draw)
     cp = new ControllablePlayer(g, window.jf)
-
-
-
-
 
     window.startLoopSeparateThread()
 

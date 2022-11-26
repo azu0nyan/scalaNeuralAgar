@@ -57,18 +57,37 @@ class GameInstance(p: GameParams = GameParams()) {
       deadPlayers = g.deadPlayers ++ newDead,
       tick = g.tick + 1,
       food = foodLeft)
+
+    val tFBegin = g.tick * g.params.foodPerTick
+    val tFEnd = (g.tick + 1) * g.params.foodPerTick
+    for (_ <- tFBegin.ceil.toInt until tFEnd.ceil.toInt) spawnFood()
   }
 
 
   def draw(gr: Graphics2D): Unit = {
-    gr.setColor(Color.GREEN)
-    for (f <- g.food) gr.fillOval(f.x.toInt - 5, f.y.toInt - 5, 10, 10)
+    gr.setColor(Color.BLACK)
+    gr.fillRect(0, 0, g.params.area.x.toInt, g.params.area.y.toInt)
 
 
-    gr.setColor(Color.RED)
+    for (f <- g.food) {
+
+      gr.setColor(new Color(0, 255, 0, 70))
+      gr.fillOval(f.x.toInt - 8, f.y.toInt - 8, 16, 16)
+      gr.setColor(Color.GREEN)
+      gr.fillOval(f.x.toInt - 5, f.y.toInt - 5, 10, 10)
+    }
+
+
     for (p <- g.alivePlayers) {
-      gr.fillOval(p.pos.x.toInt - p.rad.ceil.toInt / 2, p.pos.y.toInt - p.rad.ceil.toInt / 2,
-        p.rad.ceil.toInt, p.rad.ceil.toInt)
+      gr.setColor(new Color(255, 200, 200, 30))
+      gr.fillOval(
+        p.pos.x.toInt - p.rad.ceil.toInt - 3,
+        p.pos.y.toInt - p.rad.ceil.toInt - 3,
+        p.rad.ceil.toInt * 2 + 6, p.rad.ceil.toInt * 2 + 6)
+
+      gr.setColor(new Color(255, 0, 0))
+      gr.fillOval(p.pos.x.toInt - p.rad.ceil.toInt, p.pos.y.toInt - p.rad.ceil.toInt,
+        p.rad.ceil.toInt * 2, p.rad.ceil.toInt * 2)
 
 
     }
