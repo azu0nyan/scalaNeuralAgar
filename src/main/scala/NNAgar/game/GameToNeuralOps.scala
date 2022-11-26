@@ -43,8 +43,8 @@ object GameToNeuralOps {
 
   def fitnessFunction(g: Game, pId: Int): Double = {
     val player = g.player(pId)
-    val travelCoeff = player.distanceTraveled / g.params.speed(g.params.initialSize)
-    math.pow(player.size / 100,  1.4) + 20 * math.pow(travelCoeff, 1.2d) / (player.aliveSec(g) + 1) //+ player.eatenFood * 20 + math.pow(player.eatenEnemy, 1.3d)
+    val travelCoeff = 1.3 * player.distanceTraveled / g.params.speed(g.params.initialSize)
+    20 * math.pow(travelCoeff, 1.2d) / (player.aliveSec(g) + 1) + player.eatenFood * 20 + math.pow(player.eatenEnemy, 1.01d)
   }
 
   def playerControl(gi: GameInstance, pId: Int, act: IndexedSeq[Double]): Unit = {

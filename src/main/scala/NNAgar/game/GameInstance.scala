@@ -31,6 +31,9 @@ class GameInstance(p: GameParams = GameParams()) {
 
   def player(id: Int): Player = g.player(id)
 
+  def removePlayer(id: Int): Unit =
+    g = g.copy(alivePlayers = g.alivePlayers.filter(_.id != id), deadPlayers = g.deadPlayers.filter(_.id != id))
+
   def tick(): Unit = {
     //println(s"Tick ${g.tick} players alive: ${g.alivePlayers.size}")
     val foodLeft = g.food.filter(f => !g.alivePlayers.exists(_.contains(f)))
@@ -39,7 +42,7 @@ class GameInstance(p: GameParams = GameParams()) {
 
     val (newAliveT, newDeadT) = af
       .map { p =>
-        val tryPos = p.pos  + p.dir * g.params.tickTime * g.params.speed(p.size)
+        val tryPos = p.pos + p.dir * g.params.tickTime * g.params.speed(p.size)
         val newPos = V2(math.max(0, math.min(g.params.area.x, tryPos.x)), math.max(0, math.min(g.params.area.y, tryPos.y)))
         val dmg = (newPos - tryPos).length
 
@@ -55,7 +58,7 @@ class GameInstance(p: GameParams = GameParams()) {
             (nA, dead :+ canBeEaten.copy(deadAt = Some(g.tick)))
           case None => (alive :+ canBeEaten, dead)
       }
-    val (newAlive, moreDead) = newAliveT.partition(p => p.size >0)
+    val (newAlive, moreDead) = newAliveT.partition(p => p.size > 0)
     val newDead = newDeadT ++ moreDead.map(_.copy(deadAt = Some(g.tick)))
 
     g = g.copy(alivePlayers = newAlive,
@@ -96,8 +99,7 @@ class GameInstance(p: GameParams = GameParams()) {
 
       gr.setColor(new Color(255, 255, 255))
       gr.setFont(new Font("", Font.BOLD, 12))
-      gr.drawString(p.id.toInt.toString + " " + p.size.toInt.toString,  p.pos.x.toInt, p.pos.y.toInt)
-
+      gr.drawString(p.id.toInt.toString + " " + p.size.toInt.toString, p.pos.x.toInt, p.pos.y.toInt)
 
 
     }

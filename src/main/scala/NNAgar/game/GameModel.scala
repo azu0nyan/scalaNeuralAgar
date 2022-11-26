@@ -5,7 +5,7 @@ import scala.util.Random
 
 object GameModel {
 
-  case class GameParams(initialSize: Double = 60d,
+  case class GameParams(initialSize: Double = 40d,
                         tickTime: Double = 1.0 / 60.0,
                         sizePerFood: Double = 30.0,
                         foodPerTick: Double = 0.4,
@@ -30,7 +30,7 @@ object GameModel {
     def intersects(ot: Player): Boolean = (pos - ot.pos).length < rad
 
     def alive: Boolean = deadAt.isEmpty
-    
+
     def aliveSec(g: Game): Double = (deadAt.getOrElse(g.tick) - spawnedAt) * g.params.tickTime
 
 
