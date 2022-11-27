@@ -24,6 +24,8 @@ case class GeneticSorterParams(
                                 passToNextGenerationCount: Int = 60,
                                 selectTopToMutatate: Int = 120,
 
+                                wavesToRemember: Int = 30,
+
                                 neuralNetStructure: NeuralNetStructure = NeuralNetStructureImpl(IndexedSeq(27, 12, 12, 4), logisticCurve),
                                 bitPerGene: Int = 8,
                                 conv: Int => Double = x => (x - 128) / 128.0,
@@ -38,13 +40,14 @@ case class GeneticSorterParams(
 }
 
 
-class ConcurrentGeneticSorter(params: GeneticSorterParams = GeneticSorterParams()) {
+class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterParams()) {
 
   //  var waves: Seq[Wave] = Seq(new Wave("Initial", params = params, genomes = for (i <- 0 until params.generationSize) yield GenomeOps.randomGenome(params.genomeSizeBytes)))
   //
   var sleep: Long = 20
   var drawGame: Boolean = true
   var pause: Boolean = false
+  var showFieldId: Int = -1
 
   //  def wave: Wave = waves.last
 
@@ -70,7 +73,7 @@ class ConcurrentGeneticSorter(params: GeneticSorterParams = GeneticSorterParams(
       new Thread(() => {
         var i = 0
         while (i < params.generationTicks(history.size)) {
-          if(!pause) {
+          if (!pause) {
             wave.tick()
             i = i + 1
           } else {
@@ -83,6 +86,7 @@ class ConcurrentGeneticSorter(params: GeneticSorterParams = GeneticSorterParams(
       wave
     }
     history = history :+ currentWaves
+    if(history.size > params.wavesToRemember) history = history.drop(history.size - params.wavesToRemember)
     selectedPlayerId = None
   }
 
@@ -109,31 +113,44 @@ class ConcurrentGeneticSorter(params: GeneticSorterParams = GeneticSorterParams(
   val gameFieldX = 10
   val gameFieldY = 40
   val gameFieldPadding = 20
-  val gameFieldSize = 1000 / gameFieldRowColums - gameFieldPadding
-  val gameFieldSizeWithPadding = gameFieldSize + gameFieldPadding
+  val gameFieldTotalWH = 1000
+
+  val gameFieldSize = gameFieldTotalWH - gameFieldPadding
   val gameFieldScale = gameFieldSize / params.gameParams.area.x
 
-  var selectedPlayerId:Option[Int] = None
-  var selectedPlayerWave:Int = 0
+  val gameSmallFieldSize = gameFieldTotalWH / gameFieldRowColums - gameFieldPadding
+  val gameSmallFieldSizeWithPadding = gameSmallFieldSize + gameFieldPadding
+  val gameSmallFieldScale = gameSmallFieldSize / params.gameParams.area.x
+
+  var selectedPlayerId: Option[Int] = None
+  var selectedPlayerWave: Int = 0
 
   def draw(g: Graphics2D): Unit = {
-    if(selectedPlayerId.isEmpty){
-      val wave = currentWaves.maxBy(w => w.players.maxBy(p => p.player.size).player.size)
+    if (selectedPlayerId.isEmpty) {
+
+      val wave = if (showFieldId == -1) currentWaves.maxBy(w => w.players.maxBy(p => p.player.size).player.size)
+      else currentWaves(showFieldId % currentWaves.size)
+
       val pl = wave.players.maxBy(_.player.size)
       selectedPlayerWave = currentWaves.indexOf(wave)
       selectedPlayerId = Some(pl.pId)
+
     }
 
     if (drawGame) {
-      for ((w, i) <- currentWaves.zipWithIndex) {
-        val xi = i % gameFieldRowColums
-        val yi = i / gameFieldRowColums
+      if(showFieldId == -1) {
+        for ((w, i) <- currentWaves.zipWithIndex) {
+          val xi = i % gameFieldRowColums
+          val yi = i / gameFieldRowColums
 
-        w.gameInstance.draw(g, gameFieldX + xi * gameFieldSizeWithPadding, gameFieldY + yi * gameFieldSizeWithPadding, gameFieldScale,
-          if(i == selectedPlayerWave) selectedPlayerId.toSeq else Seq())
+          w.gameInstance.draw(g, gameFieldX + xi * gameSmallFieldSizeWithPadding, gameFieldY + yi * gameSmallFieldSizeWithPadding, gameSmallFieldScale,
+            if (i == selectedPlayerWave) selectedPlayerId.toSeq else Seq())
+        }
+      } else {
+        currentWaves(showFieldId % currentWaves.size).gameInstance.draw(g, gameFieldX, gameFieldY, gameFieldScale,
+          if (showFieldId == selectedPlayerWave) selectedPlayerId.toSeq else Seq())
       }
     }
-
 
 
     drawWavesStats(g)
@@ -141,8 +158,8 @@ class ConcurrentGeneticSorter(params: GeneticSorterParams = GeneticSorterParams(
     drawSelectedNN(g)
   }
 
-  def drawSelectedNN(g:Graphics2D): Unit = {
-    if(selectedPlayerId.nonEmpty){
+  def drawSelectedNN(g: Graphics2D): Unit = {
+    if (selectedPlayerId.nonEmpty) {
       currentWaves(selectedPlayerWave).players.find(_.pId == selectedPlayerId.get) match
         case Some(p) =>
           NeuralNetDrawer.draw(p.neuralNet, 1250, 40, 600, 600, g)
@@ -150,19 +167,27 @@ class ConcurrentGeneticSorter(params: GeneticSorterParams = GeneticSorterParams(
     }
   }
 
-  def click(x:Int, y: Int): Unit = {
-    val xi = (x - gameFieldX) / gameFieldSizeWithPadding
-    val yi = (y - gameFieldY) / gameFieldSizeWithPadding
+  def click(x: Int, y: Int): Unit = {
+    if(showFieldId == -1) {
+      val xi = (x - gameFieldX) / gameSmallFieldSizeWithPadding
+      val yi = (y - gameFieldY) / gameSmallFieldSizeWithPadding
 
-    val xC = (x - gameFieldX) % gameFieldSizeWithPadding
-    val yC = (y - gameFieldY) % gameFieldSizeWithPadding
-    val pos = V2(xC / gameFieldScale, yC / gameFieldScale)
+      val xC = (x - gameFieldX) % gameSmallFieldSizeWithPadding
+      val yC = (y - gameFieldY) % gameSmallFieldSizeWithPadding
+      val pos = V2(xC / gameSmallFieldScale, yC / gameSmallFieldScale)
 
-    val id = xi + yi * gameFieldRowColums
-    if(0 <= id && id < currentWaves.size){
-      val w = currentWaves(id)
-      selectedPlayerId = w.players.minByOption(p => (p.player.pos - pos).length).map(_.pId)
-      selectedPlayerWave = id
+      val id = xi + yi * gameFieldRowColums
+      if (0 <= id && id < currentWaves.size) {
+        val w = currentWaves(id)
+        selectedPlayerId = w.players.minByOption(p => (p.player.pos - pos).length).map(_.pId)
+        selectedPlayerWave = id
+      }
+    } else {
+      val xC = (x - gameFieldX) % gameFieldSize
+      val yC = (y - gameFieldY) % gameFieldSize
+      val pos = V2(xC / gameFieldScale, yC / gameFieldScale)
+      selectedPlayerId = currentWaves(showFieldId % currentWaves.size).players.minByOption (p => (p.player.pos - pos).length).map(_.pId)
+      selectedPlayerWave = showFieldId % currentWaves.size
     }
   }
 
@@ -220,7 +245,7 @@ class SingleThreadGeneticSorter(params: GeneticSorterParams = GeneticSorterParam
 
   def draw(g: Graphics2D): Unit = {
     if (drawGame) {
-//      wave.gameInstance.draw(g, 20, 20, 1000, Seq())
+      //      wave.gameInstance.draw(g, 20, 20, 1000, Seq())
     }
 
     drawWavesStats(g)

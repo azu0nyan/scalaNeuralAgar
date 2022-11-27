@@ -32,13 +32,14 @@ object NeuralNetDrawer {
          n <- 0 until nn.layerSizes(curLayer);
          s <- 0 until nn.layerSizes(prevLayer)) {
       val sVal = nn.synapses(nn.synapseId(prevLayer, s, n))
-      if (sVal > 0) {
-        g.setColor(new Color(0, math.min(255 * (sVal * sVal), 255).toInt, 10))
-      } else {
-        g.setColor(new Color(math.min(255 * (sVal * sVal), 255).toInt, 0, 10))
-      }
       val nVal = if (nn.lastCalculation.nonEmpty) nn.lastCalculation(nn.neuronId(prevLayer, n)) else 0
-      val thick = (nVal * 1.5).toFloat
+      if (nVal * sVal > 0) {
+        g.setColor(new Color(0, math.min(255 * math.abs(nVal * sVal), 255).toInt, 10))
+      } else {
+        g.setColor(new Color(math.min(255 * math.abs((nVal * sVal)), 255).toInt, 0, 10))
+      }
+
+      val thick = math.abs(nVal * sVal).toFloat
       g.setStroke(new BasicStroke(thick))
       g.drawLine(layerX(prevLayer), neuronY(prevLayer, s), layerX(curLayer), neuronY(curLayer, n))
 
