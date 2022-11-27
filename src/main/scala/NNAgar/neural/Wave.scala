@@ -9,7 +9,7 @@ class Wave(val name:String,val  params: GeneticSorterParams,val  genomes: Seq[Ge
   var ticks = 0
   var players: Seq[NeuralPlayer] = Seq()
 
-  for(genom <- genomes.take(params.targetPlayers)) spawn(genom)
+  for(genom <- genomes.take(params.playersOnMap)) spawn(genom)
 
   def spawn(genome: Genome): Int = {
     val nn = GenomeOps.neuralNetFromGenome(genome, params.neuralNetStructure, params.bitPerGene, params.conv)
@@ -24,7 +24,7 @@ class Wave(val name:String,val  params: GeneticSorterParams,val  genomes: Seq[Ge
 
     for (p <- players) p.tick()
     gameInstance.tick()
-    if(params.spawnToReachTarget && params.targetPlayers > gameInstance.gameData.alivePlayers.size) {
+    if(params.spawnToReachTarget && params.playersOnMap > gameInstance.gameData.alivePlayers.size) {
       val genome = genomes(gameInstance.gameData.playerCount % genomes.size)
       spawn(genome)
     }
@@ -32,14 +32,17 @@ class Wave(val name:String,val  params: GeneticSorterParams,val  genomes: Seq[Ge
 
   }
 
-  def topGenomes: Seq[Genome] = topPlayers.map(_.genome).distinct  
-  
-  def topPlayers: Seq[NeuralPlayer] = players.sortBy(p => - GameToNeuralOps.fitnessFunction(gameInstance.gameData, p.pId))
-  
+  def topGenomes: Seq[Genome] = topPlayers.map(_.genome).distinct
+
+  def topPlayers: Seq[NeuralPlayer] = {
+    val data = gameInstance.gameData
+    players.sortBy(p => -GameToNeuralOps.fitnessFunction(data, p.pId))
+  }
+
   def maxFitness: Double = GameToNeuralOps.fitnessFunction(gameInstance.gameData, topPlayers.head.pId)
-  
-  def avgFitness: Double = players.map(p => GameToNeuralOps.fitnessFunction(gameInstance.gameData, p.pId)).sum / players.size 
-  
-  def medianFitness: Double = players.map(p => GameToNeuralOps.fitnessFunction(gameInstance.gameData, p.pId))(players.size / 2)  
-  
+
+  def avgFitness: Double = players.map(p => GameToNeuralOps.fitnessFunction(gameInstance.gameData, p.pId)).sum / players.size
+
+  def medianFitness: Double = players.map(p => GameToNeuralOps.fitnessFunction(gameInstance.gameData, p.pId))(players.size / 2)
+
 }

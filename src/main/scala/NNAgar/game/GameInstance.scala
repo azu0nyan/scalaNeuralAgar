@@ -7,16 +7,14 @@ import java.awt.{Color, Font, Graphics2D}
 class GameInstance(p: GameParams = GameParams()) {
 
   var gameData: Game = Game(params = p)
-  for(i <- 0 until p.initialFood) spawnFood()
-
-
+  for (i <- 0 until p.initialFood) spawnFood()
 
 
   def spawnPlayer(): Int = {
     val np = Player(gameData.deadPlayers.size + gameData.alivePlayers.size + 1, Helpers.randomInArea(gameData.params.area), V2(0, 0), gameData.params.initialSize, gameData.tick)
     gameData = gameData.copy(alivePlayers = gameData.alivePlayers :+ np)
 
-//    println(s"Player ${np.id} spawned at ${np.pos}.")
+    //    println(s"Player ${np.id} spawned at ${np.pos}.")
     np.id
   }
 
@@ -60,11 +58,11 @@ class GameInstance(p: GameParams = GameParams()) {
             val eaterId = alive.indexOf(eater)
             val nA = alive.updated(eaterId, eater.copy(size = eater.size + canBeEaten.size))
 
-            (nA, dead :+ canBeEaten.copy(deadAt = Some(gameData.tick)))
+            (nA, dead :+ canBeEaten.copy(deadAt = Some(gameData.tick), size = 0))
           case None => (alive :+ canBeEaten, dead)
       }
     val (newAlive, moreDead) = newAliveT.partition(p => p.size > 0)
-    val newDead = newDeadT ++ moreDead.map(_.copy(deadAt = Some(gameData.tick)))
+    val newDead = newDeadT ++ moreDead.map(_.copy(deadAt = Some(gameData.tick), size = 0))
 
     gameData = gameData.copy(alivePlayers = newAlive,
       deadPlayers = gameData.deadPlayers ++ newDead,
@@ -77,36 +75,40 @@ class GameInstance(p: GameParams = GameParams()) {
   }
 
 
-  def draw(gr: Graphics2D): Unit = {
+  def draw(gr: Graphics2D, x: Double, y: Double, size: Double): Unit = {
     gr.setColor(Color.BLACK)
-    gr.fillRect(0, 0, gameData.params.area.x.toInt, gameData.params.area.y.toInt)
+    gr.fillRect(x.toInt, y.toInt, size.toInt, size.toInt)
 
+    val sC = size / gameData.params.area.x
 
     for (f <- gameData.food) {
-
       gr.setColor(new Color(0, 255, 0, 70))
-      gr.fillOval(f.x.toInt - 8, f.y.toInt - 8, 16, 16)
+      gr.fillOval((x + f.x * sC - 3).toInt, (y + f.y * sC - 3).toInt, 6, 6)
       gr.setColor(Color.GREEN)
-      gr.fillOval(f.x.toInt - 5, f.y.toInt - 5, 10, 10)
+      gr.fillOval((x + f.x * sC - 2).toInt, (y + f.y * sC - 2).toInt, 4, 4)
     }
-
 
     for (p <- gameData.alivePlayers) {
       gr.setColor(new Color(255, 200, 200, 30))
       gr.fillOval(
-        p.pos.x.toInt - p.rad.ceil.toInt - 3,
-        p.pos.y.toInt - p.rad.ceil.toInt - 3,
-        p.rad.ceil.toInt * 2 + 6, p.rad.ceil.toInt * 2 + 6)
+        (x + p.pos.x * sC - p.rad * sC - 3).toInt,
+        (y + p.pos.y * sC - p.rad * sC - 3).toInt,
+        ((p.rad * sC).ceil * 2 + 6).toInt,
+        ((p.rad * sC).ceil * 2 + 6).toInt)
 
       gr.setColor(new Color(255, 0, 0))
-      gr.fillOval(p.pos.x.toInt - p.rad.ceil.toInt, p.pos.y.toInt - p.rad.ceil.toInt,
-        p.rad.ceil.toInt * 2, p.rad.ceil.toInt * 2)
+      gr.fillOval(
+        x.toInt + (p.pos.x * sC - p.rad * sC).toInt,
+        y.toInt + (p.pos.y * sC - p.rad * sC).toInt,
+        ((p.rad * sC).ceil * 2).toInt,
+        ((p.rad * sC).ceil * 2).toInt)
 
-      gr.setColor(new Color(255, 255, 255))
-      gr.setFont(new Font("", Font.BOLD, 12))
-      gr.drawString(p.id.toInt.toString + " " + p.size.toInt.toString, p.pos.x.toInt, p.pos.y.toInt)
-
-
+      if(y.toInt + (p.pos.y * sC - p.rad * sC).toInt <= 30)
+        println()
+//      gr.setColor(new Color(255, 255, 255))
+//      gr.setFont(new Font("", Font.BOLD, 12))
+//      gr.drawString(p.id.toInt.toString + " " + p.size.toInt.toString, p.pos.x.toInt, p.pos.y.toInt)
+//
     }
 
   }

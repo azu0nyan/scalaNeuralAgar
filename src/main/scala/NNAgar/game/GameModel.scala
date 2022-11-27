@@ -12,7 +12,7 @@ object GameModel {
                         foodPerTick: Double = 0.2,
                         area: V2 = V2(1000, 1000),
                         dSizePerTick: Double = 0.02,
-                        speed: Double => Double = size => 400 - 3 * math.sqrt(size),
+                        speed: Double => Double = size => math.max(10, 400 - 400 * size / 1000d),
                         seed: Int = new Random().nextInt())
 
   case class Player(id: Int,
