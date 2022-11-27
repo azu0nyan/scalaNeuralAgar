@@ -26,14 +26,14 @@ case class GeneticSorterParams(
 
                                 wavesToRemember: Int = 30,
 
-                                neuralNetStructure: NeuralNetStructure = NeuralNetStructureImpl(IndexedSeq(27, 12, 12, 4), logisticCurve),
+                                neuralNetStructure: NeuralNetStructure = NeuralNetStructureImpl(IndexedSeq(GameToNeuralOps.visionSize, 16, 16, 4), logisticCurve),
                                 bitPerGene: Int = 8,
                                 conv: Int => Double = x => (x - 128) / 128.0,
                                 playerVision: (Game, Int) => IndexedSeq[Double] = GameToNeuralOps.playerVision,
                                 playerControl: (GameInstance, Int, IndexedSeq[Double]) => Unit = GameToNeuralOps.playerControl,
                                 fitnessFunction: (Game, Int) => Double = GameToNeuralOps.fitnessFunction,
 
-                                gameParams: GameParams = GameParams(area = V2(256, 256), initialFood = 10, foodPerTick = 0.2, initialSize = 10d, sizePerFood = 10d)
+                                gameParams: GameParams = GameParams(area = V2(256, 256), initialFood = 50, foodPerTick = 0.2, initialSize = 10d, sizePerFood = 10d, dSizePerTick = 0.01)
                               ) {
   def genomeSizeBytes: Int = neuralNetStructure.workingNeurons + neuralNetStructure.synapsesCount
 

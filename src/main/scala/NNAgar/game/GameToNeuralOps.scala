@@ -7,8 +7,9 @@ import scala.collection.immutable.IndexedSeq
 object GameToNeuralOps {
 
 
-  val visionSectors = 8
+  val visionSectors = 16
 
+  val visionSize = visionSectors * 4 + 3
   val maxVisionDistance: Double = 300
   val maxSize: Double = 1000
 
@@ -26,13 +27,19 @@ object GameToNeuralOps {
         dist.length < maxVisionDistance && sectorBegin <= a && a < sectorEnd
       }.map(f => (p.pos - f).length / maxVisionDistance).minOption.getOrElse(1.0)
 
+      val foodSize = g.food.count { f =>
+        val dist = p.pos - f
+        val a = dist.angleToOx
+        dist.length < maxVisionDistance && sectorBegin <= a && a < sectorEnd
+      }
+
       val (enemyDist, enemySize) = g.alivePlayers.filter(_.id != pId).filter(enemy =>
         val dist = p.pos - enemy.pos
         val angle = dist.angleToOx
         dist.length < maxVisionDistance && sectorBegin <= angle && angle < sectorEnd
       ).map(e => ((p.pos - e.pos).length / maxVisionDistance, e.size / maxSize)).minByOption(_._1).getOrElse((1d, 0d))
 
-      Seq(foodDist, enemyDist, enemySize / maxSize)
+      Seq(foodDist, math.min(1d, foodSize / 32d),enemyDist, enemySize / maxSize)
     }
 
     val res =  (sectorsData.flatten.toIndexedSeq) ++ IndexedSeq(
