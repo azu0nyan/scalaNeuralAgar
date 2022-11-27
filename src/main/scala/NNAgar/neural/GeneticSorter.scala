@@ -11,18 +11,18 @@ import scala.util.Random
 
 
 case class GeneticSorterParams(
-                                playersOnMap: Int = 15,
-                                spawnToReachTarget: Boolean = true,
+                                playersOnMap: Int = 50,
+                                spawnToReachTarget: Boolean = false,
                                 threads: Int = 6,
-                                generationSize: Int = 15 * 6,
+                                generationSize: Int = 50 * 6,
                                 generationTicks: Int => Int = {
                                   case x if x < 10 => 5 * 60
                                   case x if x < 100 => (x / 2) * 60
                                   case _ => 60 * 100
                                 },
 
-                                passToNextGenerationCount: Int = 30,
-                                selectTopToMutatate: Int = 30,
+                                passToNextGenerationCount: Int = 60,
+                                selectTopToMutatate: Int = 60,
 
                                 wavesToRemember: Int = 30,
 
@@ -76,6 +76,9 @@ class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterPar
         while (i < params.generationTicks(waveId)) {
           if (!pause) {
             wave.tick()
+            if(wave.gameInstance.gameData.alivePlayers.isEmpty){
+              i = params.generationTicks(waveId)
+            }
             i = i + 1
           } else {
             Thread.sleep(1)
