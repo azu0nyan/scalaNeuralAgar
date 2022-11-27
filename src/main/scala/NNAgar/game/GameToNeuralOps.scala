@@ -2,6 +2,8 @@ package NNAgar.game
 
 import NNAgar.game.GameModel.{Game, Player}
 
+import scala.collection.immutable.IndexedSeq
+
 object GameToNeuralOps {
 
 
@@ -28,23 +30,24 @@ object GameToNeuralOps {
         val dist = p.pos - enemy.pos
         val angle = dist.angleToOx
         dist.length < maxVisionDistance && sectorBegin <= angle && angle < sectorEnd
-      ).map(e => ((p.pos - e.pos).length / maxVisionDistance, e.size)).minByOption(_._1).getOrElse((1d, 0d))
+      ).map(e => ((p.pos - e.pos).length / maxVisionDistance, e.size / maxSize)).minByOption(_._1).getOrElse((1d, 0d))
 
-      Seq(foodDist, enemyDist, enemySize)
+      Seq(foodDist, enemyDist, enemySize / maxSize)
     }
 
-    val res = IndexedSeq(
+    val res =  (sectorsData.flatten.toIndexedSeq) ++ IndexedSeq(
       p.size / maxSize,
       ownPos.x,
-      ownPos.y) ++ (sectorsData.flatten.toIndexedSeq)
+      ownPos.y)
   //  println(res)
     res
   }
 
   def fitnessFunction(g: Game, pId: Int): Double = {
     val player = g.player(pId)
-    val travelCoeff = 1.3 * player.distanceTraveled / g.params.speed(g.params.initialSize)
-    20 * math.pow(travelCoeff, 1.2d) / (player.aliveSec(g) + 1) + player.eatenFood * 20 + math.pow(player.eatenEnemy, 1.01d)
+//    val travelCoeff = 1.3 * player.distanceTraveled / g.params.speed(g.params.initialSize)
+// +
+     /*player.distanceTraveled / 1000d  +*/  player.eatenFood * 40 + player.eatenEnemy * 50 + 30 * player.aliveSec(g)
   }
 
   def playerControl(gi: GameInstance, pId: Int, act: IndexedSeq[Double]): Unit = {

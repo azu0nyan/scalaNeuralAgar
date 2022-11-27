@@ -6,48 +6,53 @@ import java.awt.{Color, Font, Graphics2D}
 
 class GameInstance(p: GameParams = GameParams()) {
 
-  var g: Game = Game(params = p)
+  var gameData: Game = Game(params = p)
+  for(i <- 0 until p.initialFood) spawnFood()
+
+
 
 
   def spawnPlayer(): Int = {
-    val np = Player(g.deadPlayers.size + g.alivePlayers.size + 1, Helpers.randomInArea(g.params.area), V2(0, 0), g.params.initialSize, g.tick)
-    g = g.copy(alivePlayers = g.alivePlayers :+ np)
+    val np = Player(gameData.deadPlayers.size + gameData.alivePlayers.size + 1, Helpers.randomInArea(gameData.params.area), V2(0, 0), gameData.params.initialSize, gameData.tick)
+    gameData = gameData.copy(alivePlayers = gameData.alivePlayers :+ np)
 
-    println(s"Player ${np.id} spawned at ${np.pos}.")
+//    println(s"Player ${np.id} spawned at ${np.pos}.")
     np.id
   }
 
   def spawnFood(): Unit = {
-    g = g.copy(food = g.food :+ Helpers.randomInArea(g.params.area))
+    gameData = gameData.copy(food = gameData.food :+ Helpers.randomInArea(gameData.params.area))
   }
 
   def setMoveDirection(dir: V2, playerId: Int): Unit = {
-    g.alivePlayers.indexWhere(_.id == playerId) match
+    gameData.alivePlayers.indexWhere(_.id == playerId) match
       case -1 =>
       case pId =>
-        val np = g.alivePlayers(pId).copy(dir = dir)
-        g = g.copy(alivePlayers = g.alivePlayers.updated(pId, np))
+        val np = gameData.alivePlayers(pId).copy(dir = dir)
+        gameData = gameData.copy(alivePlayers = gameData.alivePlayers.updated(pId, np))
   }
 
-  def player(id: Int): Player = g.player(id)
+  def player(id: Int): Player = gameData.player(id)
 
   def removePlayer(id: Int): Unit =
-    g = g.copy(alivePlayers = g.alivePlayers.filter(_.id != id), deadPlayers = g.deadPlayers.filter(_.id != id))
+    gameData = gameData.copy(alivePlayers = gameData.alivePlayers.filter(_.id != id), deadPlayers = gameData.deadPlayers.filter(_.id != id))
 
   def tick(): Unit = {
     //println(s"Tick ${g.tick} players alive: ${g.alivePlayers.size}")
-    val foodLeft = g.food.filter(f => !g.alivePlayers.exists(_.contains(f)))
-    val af = for (p <- g.alivePlayers) yield
-      p.copy(size = p.size + g.params.sizePerFood * g.food.count(p.contains))
+    val foodLeft = gameData.food.filter(f => !gameData.alivePlayers.exists(_.contains(f)))
+    val af = for (p <- gameData.alivePlayers) yield {
+      val foodEaten = gameData.food.count(p.contains)
+      p.copy(size = p.size + gameData.params.sizePerFood * foodEaten, eatenFood = p.eatenFood + foodEaten)
+    }
 
     val (newAliveT, newDeadT) = af
       .map { p =>
-        val tryPos = p.pos + p.dir * g.params.tickTime * g.params.speed(p.size)
-        val newPos = V2(math.max(0, math.min(g.params.area.x, tryPos.x)), math.max(0, math.min(g.params.area.y, tryPos.y)))
+        val tryPos = p.pos + p.dir * gameData.params.tickTime * gameData.params.speed(p.size)
+        val newPos = V2(math.max(0, math.min(gameData.params.area.x, tryPos.x)), math.max(0, math.min(gameData.params.area.y, tryPos.y)))
         val dmg = (newPos - tryPos).length
 
         p.copy(pos = newPos,
-          distanceTraveled = p.distanceTraveled + (p.pos - newPos).length, size = math.max(0, p.size - dmg - g.params.dSizePerTick))
+          distanceTraveled = p.distanceTraveled + (p.pos - newPos).length, size = math.max(0, p.size - dmg - gameData.params.dSizePerTick))
       }.sortBy(-_.size)
       .foldLeft((Seq[Player](), Seq[Player]())) {
         case ((alive, dead), canBeEaten) => alive.find(a => a.intersects(canBeEaten)) match
@@ -55,29 +60,29 @@ class GameInstance(p: GameParams = GameParams()) {
             val eaterId = alive.indexOf(eater)
             val nA = alive.updated(eaterId, eater.copy(size = eater.size + canBeEaten.size))
 
-            (nA, dead :+ canBeEaten.copy(deadAt = Some(g.tick)))
+            (nA, dead :+ canBeEaten.copy(deadAt = Some(gameData.tick)))
           case None => (alive :+ canBeEaten, dead)
       }
     val (newAlive, moreDead) = newAliveT.partition(p => p.size > 0)
-    val newDead = newDeadT ++ moreDead.map(_.copy(deadAt = Some(g.tick)))
+    val newDead = newDeadT ++ moreDead.map(_.copy(deadAt = Some(gameData.tick)))
 
-    g = g.copy(alivePlayers = newAlive,
-      deadPlayers = g.deadPlayers ++ newDead,
-      tick = g.tick + 1,
+    gameData = gameData.copy(alivePlayers = newAlive,
+      deadPlayers = gameData.deadPlayers ++ newDead,
+      tick = gameData.tick + 1,
       food = foodLeft)
 
-    val tFBegin = g.tick * g.params.foodPerTick
-    val tFEnd = (g.tick + 1) * g.params.foodPerTick
+    val tFBegin = gameData.tick * gameData.params.foodPerTick
+    val tFEnd = (gameData.tick + 1) * gameData.params.foodPerTick
     for (_ <- tFBegin.ceil.toInt until tFEnd.ceil.toInt) spawnFood()
   }
 
 
   def draw(gr: Graphics2D): Unit = {
     gr.setColor(Color.BLACK)
-    gr.fillRect(0, 0, g.params.area.x.toInt, g.params.area.y.toInt)
+    gr.fillRect(0, 0, gameData.params.area.x.toInt, gameData.params.area.y.toInt)
 
 
-    for (f <- g.food) {
+    for (f <- gameData.food) {
 
       gr.setColor(new Color(0, 255, 0, 70))
       gr.fillOval(f.x.toInt - 8, f.y.toInt - 8, 16, 16)
@@ -86,7 +91,7 @@ class GameInstance(p: GameParams = GameParams()) {
     }
 
 
-    for (p <- g.alivePlayers) {
+    for (p <- gameData.alivePlayers) {
       gr.setColor(new Color(255, 200, 200, 30))
       gr.fillOval(
         p.pos.x.toInt - p.rad.ceil.toInt - 3,

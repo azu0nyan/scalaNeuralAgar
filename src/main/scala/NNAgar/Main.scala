@@ -5,6 +5,7 @@ import NNAgar.game.GameModel.Game
 import NNAgar.neural.{GeneticSorter, NeuralPlayer}
 
 import java.awt.Graphics2D
+import java.awt.event.{KeyEvent, KeyListener}
 import java.awt.image.BufferedImage
 import javax.swing.{JFrame, WindowConstants}
 import scala.util.Try
@@ -22,9 +23,16 @@ object Main {
     var cp : ControllablePlayer = null
     val window = new GameWindow(preDraw = {
       sorter.tick()
-    }, draw = sorter.gameInstance.draw)
+    }, draw = sorter.draw)
 
-    cp = new ControllablePlayer(sorter.gameInstance, window.jf)
+    window.jf.addKeyListener(new KeyListener {
+      override def keyTyped(e: KeyEvent): Unit = {}
+      override def keyPressed(e: KeyEvent): Unit = {}
+      override def keyReleased(e: KeyEvent): Unit = e.getKeyCode match
+        case KeyEvent.VK_G =>
+    })
+    
+//    cp = new ControllablePlayer(sorter.gameInstance, window.jf)
 
     window.startLoopSeparateThread()
 

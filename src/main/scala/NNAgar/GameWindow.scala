@@ -35,15 +35,13 @@ class GameWindow(preDraw: => Unit = {}, draw: Graphics2D => Unit, var fps: Int  
         preDraw
         draw(g)
 
-        g.drawLine(0, 0, 100, 100)
-
         bs.show()
         g.dispose()
 
 
         val end = System.currentTimeMillis
         val len = end - start
-        if (len < frameLength) Thread.sleep(frameLength - len)
+       // if (len < frameLength) Thread.sleep(frameLength - len)
       }
     }
 
