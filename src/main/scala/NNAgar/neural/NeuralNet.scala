@@ -37,7 +37,8 @@ case class NeuralNetStructureImpl(layerSizes: IndexedSeq[Int], activation: Doubl
 trait NeuralNetCalculator extends NeuralNetStructure {
   def neurons: IndexedSeq[Double]
   def synapses: IndexedSeq[Double]
-
+  
+  var lastCalculation: IndexedSeq[Double] = IndexedSeq()
 
   def calculate(in: Seq[Double]): IndexedSeq[Double] = {
     val calculated = Array.ofDim[Double](neuronCount)
@@ -54,7 +55,8 @@ trait NeuralNetCalculator extends NeuralNetStructure {
                    ) yield linkedNeuron * synapse).sum + bias;
          y = activation(s)
          ) calculated(nId) = y
-
+    
+    lastCalculation = calculated    
     calculated.takeRight(layerSizes.last)
   }
 

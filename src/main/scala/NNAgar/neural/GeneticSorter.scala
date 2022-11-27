@@ -1,6 +1,6 @@
 package NNAgar.neural
 
-import NNAgar.game.{GameInstance, GameToNeuralOps, V2}
+import NNAgar.game.{GameInstance, GameToNeuralOps, NeuralNetDrawer, V2}
 import NNAgar.game.GameModel.{Game, GameParams}
 import NNAgar.neural.GenomeOps.Genome
 
@@ -24,14 +24,14 @@ case class GeneticSorterParams(
                                 passToNextGenerationCount: Int = 60,
                                 selectTopToMutatate: Int = 120,
 
-                                neuralNetStructure: NeuralNetStructure = NeuralNetStructureImpl(IndexedSeq(27, 12, 4), logisticCurve),
+                                neuralNetStructure: NeuralNetStructure = NeuralNetStructureImpl(IndexedSeq(27, 12, 12, 4), logisticCurve),
                                 bitPerGene: Int = 8,
                                 conv: Int => Double = x => (x - 128) / 128.0,
                                 playerVision: (Game, Int) => IndexedSeq[Double] = GameToNeuralOps.playerVision,
                                 playerControl: (GameInstance, Int, IndexedSeq[Double]) => Unit = GameToNeuralOps.playerControl,
                                 fitnessFunction: (Game, Int) => Double = GameToNeuralOps.fitnessFunction,
 
-                                gameParams: GameParams = GameParams(area = V2(256, 256), initialFood = 10, foodPerTick = 0.05, initialSize = 10d, sizePerFood = 10d)
+                                gameParams: GameParams = GameParams(area = V2(256, 256), initialFood = 10, foodPerTick = 0.2, initialSize = 10d, sizePerFood = 10d)
                               ) {
   def genomeSizeBytes: Int = neuralNetStructure.workingNeurons + neuralNetStructure.synapsesCount
 
@@ -42,8 +42,9 @@ class ConcurrentGeneticSorter(params: GeneticSorterParams = GeneticSorterParams(
 
   //  var waves: Seq[Wave] = Seq(new Wave("Initial", params = params, genomes = for (i <- 0 until params.generationSize) yield GenomeOps.randomGenome(params.genomeSizeBytes)))
   //
-  var sleep: Long = 0
+  var sleep: Long = 20
   var drawGame: Boolean = true
+  var pause: Boolean = false
 
   //  def wave: Wave = waves.last
 
@@ -51,6 +52,7 @@ class ConcurrentGeneticSorter(params: GeneticSorterParams = GeneticSorterParams(
   var currentWaves: Seq[Wave] = Seq()
 
   var c: CountDownLatch = new CountDownLatch(0)
+
 
   def init(): Unit = {
 
@@ -66,29 +68,34 @@ class ConcurrentGeneticSorter(params: GeneticSorterParams = GeneticSorterParams(
     currentWaves = for (i <- 0 until params.threads) yield {
       val wave = new Wave(s"w:${history.size} t:$i", params, genomesPerThread(i))
       new Thread(() => {
-        for (i <- 0 until params.generationTicks(history.size)) {
-          wave.tick()
-          if(sleep != 0) Thread.sleep(sleep)
+        var i = 0
+        while (i < params.generationTicks(history.size)) {
+          if(!pause) {
+            wave.tick()
+            i = i + 1
+          } else {
+            Thread.sleep(1)
+          }
+          if (sleep != 0) Thread.sleep(sleep)
         }
         c.countDown()
       }).start()
       wave
     }
     history = history :+ currentWaves
-
-
+    selectedPlayerId = None
   }
 
   def tick(): Unit = {
-    if(c.getCount == 0) {
-      if(history.isEmpty) {
-        val genomes = for(i <- 0 until params.generationSize) yield GenomeOps.randomGenome(params.genomeSizeBytes)
+    if (c.getCount == 0) {
+      if (history.isEmpty) {
+        val genomes = for (i <- 0 until params.generationSize) yield GenomeOps.randomGenome(params.genomeSizeBytes)
         startWave(genomes)
       } else {
         val topGenomes = currentWaves.flatMap(_.topGenomes.take(params.selectTopToMutatate / params.threads))
         val topToNextWave = currentWaves.flatMap(_.topGenomes.take(params.passToNextGenerationCount / params.threads))
         val r = new Random()
-        val newGenomes = (for(i <- 0 until (params.generationSize - params.passToNextGenerationCount))
+        val newGenomes = (for (i <- 0 until (params.generationSize - params.passToNextGenerationCount))
           yield GenomeOps.mix(topGenomes(r.nextInt(topGenomes.size)), topGenomes(r.nextInt(topGenomes.size)))).map(GenomeOps.flipRandomBits(_, r.nextInt(64)))
 
         val shuffled = new Random().shuffle(topToNextWave ++ newGenomes)
@@ -98,46 +105,87 @@ class ConcurrentGeneticSorter(params: GeneticSorterParams = GeneticSorterParams(
     }
   }
 
+  val gameFieldRowColums = math.sqrt(params.threads).ceil.toInt
+  val gameFieldX = 10
+  val gameFieldY = 40
+  val gameFieldPadding = 20
+  val gameFieldSize = 1000 / gameFieldRowColums - gameFieldPadding
+  val gameFieldSizeWithPadding = gameFieldSize + gameFieldPadding
+  val gameFieldScale = gameFieldSize / params.gameParams.area.x
+
+  var selectedPlayerId:Option[Int] = None
+  var selectedPlayerWave:Int = 0
+
   def draw(g: Graphics2D): Unit = {
-        if (drawGame) {
-          val rc = math.sqrt(params.threads).ceil.toInt
+    if(selectedPlayerId.isEmpty){
+      val wave = currentWaves.maxBy(w => w.players.maxBy(p => p.player.size).player.size)
+      val pl = wave.players.maxBy(_.player.size)
+      selectedPlayerWave = currentWaves.indexOf(wave)
+      selectedPlayerId = Some(pl.pId)
+    }
 
-          val x = 10
-          val y = 40
-          val padding = 20
-          val size = 1000 / rc - padding
+    if (drawGame) {
+      for ((w, i) <- currentWaves.zipWithIndex) {
+        val xi = i % gameFieldRowColums
+        val yi = i / gameFieldRowColums
 
-          for((w, i) <- currentWaves.zipWithIndex){
-            val xi = i % rc
-            val yi = i / rc
-            w.gameInstance.draw(g, x + xi * (size + padding), y + yi * (size + padding), size)
-           }
-
-        }
-
-        drawWavesStats(g)
-  }
-
-    def drawWavesStats(g: Graphics2D): Unit = {
-      val x = 1000
-      val y = 40
-      val dy = 30
-      val maxLines = 30
-
-      g.setColor(Color.WHITE)
-      g.fillRect(x, y, 300, dy * math.min(history.size, maxLines))
-
-      g.setColor(Color.BLACK)
-      g.setFont(new Font("", Font.PLAIN, 12))
-      for ((cw, i) <- history.reverse.zipWithIndex.take(maxLines)) {
-
-        val avgFit = cw.map(_.avgFitness).sum / cw.size
-        val maxFit = cw.map(_.maxFitness).max
-        g.drawString(cw.head.name, x + 10, y + i * dy + 25)
-        g.drawString(f"av: ${avgFit}%.1f max ${maxFit}%.1f", x + 100, y + i * dy + 25)
-
+        w.gameInstance.draw(g, gameFieldX + xi * gameFieldSizeWithPadding, gameFieldY + yi * gameFieldSizeWithPadding, gameFieldScale,
+          if(i == selectedPlayerWave) selectedPlayerId.toSeq else Seq())
       }
     }
+
+
+
+    drawWavesStats(g)
+
+    drawSelectedNN(g)
+  }
+
+  def drawSelectedNN(g:Graphics2D): Unit = {
+    if(selectedPlayerId.nonEmpty){
+      currentWaves(selectedPlayerWave).players.find(_.pId == selectedPlayerId.get) match
+        case Some(p) =>
+          NeuralNetDrawer.draw(p.neuralNet, 1250, 40, 600, 600, g)
+        case None =>
+    }
+  }
+
+  def click(x:Int, y: Int): Unit = {
+    val xi = (x - gameFieldX) / gameFieldSizeWithPadding
+    val yi = (y - gameFieldY) / gameFieldSizeWithPadding
+
+    val xC = (x - gameFieldX) % gameFieldSizeWithPadding
+    val yC = (y - gameFieldY) % gameFieldSizeWithPadding
+    val pos = V2(xC / gameFieldScale, yC / gameFieldScale)
+
+    val id = xi + yi * gameFieldRowColums
+    if(0 <= id && id < currentWaves.size){
+      val w = currentWaves(id)
+      selectedPlayerId = w.players.minByOption(p => (p.player.pos - pos).length).map(_.pId)
+      selectedPlayerWave = id
+    }
+  }
+
+  def drawWavesStats(g: Graphics2D): Unit = {
+    val x = 1000
+    val y = 40
+    val dy = 30
+    val maxLines = 30
+
+    g.setColor(Color.WHITE)
+    g.fillRect(x, y, 300, dy * math.min(history.size, maxLines))
+
+    g.setColor(Color.BLACK)
+    g.setFont(new Font("", Font.PLAIN, 12))
+    for ((cw, i) <- history.reverse.zipWithIndex.take(maxLines)) {
+
+      val avgFit = cw.map(_.avgFitness).sum / cw.size
+      val maxFit = cw.map(_.maxFitness).max
+      g.drawString(cw.head.name, x + 10, y + i * dy + 25)
+      g.drawString(f"av: ${avgFit}%.1f max ${maxFit}%.1f", x + 100, y + i * dy + 25)
+
+    }
+  }
 
 }
 
@@ -172,7 +220,7 @@ class SingleThreadGeneticSorter(params: GeneticSorterParams = GeneticSorterParam
 
   def draw(g: Graphics2D): Unit = {
     if (drawGame) {
-      wave.gameInstance.draw(g, 20, 20 , 1000)
+//      wave.gameInstance.draw(g, 20, 20, 1000, Seq())
     }
 
     drawWavesStats(g)

@@ -75,35 +75,37 @@ class GameInstance(p: GameParams = GameParams()) {
   }
 
 
-  def draw(gr: Graphics2D, x: Double, y: Double, size: Double): Unit = {
+  def draw(gr: Graphics2D, x: Double, y: Double, scale: Double, selectedPlayers:Seq[Int]): Unit = {
     gr.setColor(Color.BLACK)
-    gr.fillRect(x.toInt, y.toInt, size.toInt, size.toInt)
-
-    val sC = size / gameData.params.area.x
+    gr.fillRect(x.toInt, y.toInt, (scale * gameData.params.area.x).toInt, (scale * gameData.params.area.y).toInt)
 
     for (f <- gameData.food) {
       gr.setColor(new Color(0, 255, 0, 70))
-      gr.fillOval((x + f.x * sC - 3).toInt, (y + f.y * sC - 3).toInt, 6, 6)
+      gr.fillOval((x + f.x * scale - 3).toInt, (y + f.y * scale - 3).toInt, 6, 6)
       gr.setColor(Color.GREEN)
-      gr.fillOval((x + f.x * sC - 2).toInt, (y + f.y * sC - 2).toInt, 4, 4)
+      gr.fillOval((x + f.x * scale - 2).toInt, (y + f.y * scale - 2).toInt, 4, 4)
     }
 
     for (p <- gameData.alivePlayers) {
-      gr.setColor(new Color(255, 200, 200, 30))
+      if(selectedPlayers.contains(p.id)){
+        gr.setColor(new Color(0, 255, 232))
+      } else {
+        gr.setColor(new Color(255, 200, 200, 30))
+      }
       gr.fillOval(
-        (x + p.pos.x * sC - p.rad * sC - 3).toInt,
-        (y + p.pos.y * sC - p.rad * sC - 3).toInt,
-        ((p.rad * sC).ceil * 2 + 6).toInt,
-        ((p.rad * sC).ceil * 2 + 6).toInt)
+        (x + p.pos.x * scale - p.rad * scale - 3).toInt,
+        (y + p.pos.y * scale - p.rad * scale - 3).toInt,
+        ((p.rad * scale).ceil * 2 + 6).toInt,
+        ((p.rad * scale).ceil * 2 + 6).toInt)
 
       gr.setColor(new Color(255, 0, 0))
       gr.fillOval(
-        x.toInt + (p.pos.x * sC - p.rad * sC).toInt,
-        y.toInt + (p.pos.y * sC - p.rad * sC).toInt,
-        ((p.rad * sC).ceil * 2).toInt,
-        ((p.rad * sC).ceil * 2).toInt)
+        x.toInt + (p.pos.x * scale - p.rad * scale).toInt,
+        y.toInt + (p.pos.y * scale - p.rad * scale).toInt,
+        ((p.rad * scale).ceil * 2).toInt,
+        ((p.rad * scale).ceil * 2).toInt)
 
-      if(y.toInt + (p.pos.y * sC - p.rad * sC).toInt <= 30)
+      if(y.toInt + (p.pos.y * scale - p.rad * scale).toInt <= 30)
         println()
 //      gr.setColor(new Color(255, 255, 255))
 //      gr.setFont(new Font("", Font.BOLD, 12))
