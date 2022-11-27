@@ -14,15 +14,15 @@ case class GeneticSorterParams(
                                 playersOnMap: Int = 15,
                                 spawnToReachTarget: Boolean = true,
                                 threads: Int = 6,
-                                generationSize: Int = 25 * 6,
+                                generationSize: Int = 15 * 6,
                                 generationTicks: Int => Int = {
                                   case x if x < 10 => 5 * 60
                                   case x if x < 100 => (x / 2) * 60
                                   case _ => 60 * 100
                                 },
 
-                                passToNextGenerationCount: Int = 60,
-                                selectTopToMutatate: Int = 120,
+                                passToNextGenerationCount: Int = 30,
+                                selectTopToMutatate: Int = 30,
 
                                 wavesToRemember: Int = 30,
 
@@ -51,6 +51,7 @@ class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterPar
 
   //  def wave: Wave = waves.last
 
+  var waveId = 0
   var history: Seq[Seq[Wave]] = Seq()
   var currentWaves: Seq[Wave] = Seq()
 
@@ -69,10 +70,10 @@ class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterPar
     val genomesPerThread = genomes.sliding(perThread, perThread).toSeq
     println(genomesPerThread.size)
     currentWaves = for (i <- 0 until params.threads) yield {
-      val wave = new Wave(s"w:${history.size} t:$i", params, genomesPerThread(i))
+      val wave = new Wave(s"w:${waveId} t:$i", params, genomesPerThread(i))
       new Thread(() => {
         var i = 0
-        while (i < params.generationTicks(history.size)) {
+        while (i < params.generationTicks(waveId)) {
           if (!pause) {
             wave.tick()
             i = i + 1
@@ -86,6 +87,7 @@ class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterPar
       wave
     }
     history = history :+ currentWaves
+    waveId = waveId + 1
     if(history.size > params.wavesToRemember) history = history.drop(history.size - params.wavesToRemember)
     selectedPlayerId = None
   }
