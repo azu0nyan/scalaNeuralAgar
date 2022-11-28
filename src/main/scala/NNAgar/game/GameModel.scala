@@ -9,6 +9,7 @@ object GameModel {
                         tickTime: Double = 1.0 / 60.0,
                         sizePerFood: Double = 30.0,
                         initialFood: Int = 30,
+                        maxFood: Int = 30,
                         foodPerTick: Double = 0.2,
                         area: V2 = V2(1000, 1000),
                         dSizePerTick: Double = 0.02,

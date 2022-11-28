@@ -13,27 +13,34 @@ import scala.util.Random
 case class GeneticSorterParams(
                                 playersOnMap: Int = 50,
                                 spawnToReachTarget: Boolean = false,
-                                threads: Int = 6,
-                                generationSize: Int = 50 * 6,
+                                threads: Int = 2,
+                                generationSize: Int = 50 * 2,
                                 generationTicks: Int => Int = {
                                   case x if x < 10 => 5 * 60
                                   case x if x < 100 => (x / 2) * 60
                                   case _ => 60 * 100
                                 },
 
-                                passToNextGenerationCount: Int = 60,
+                                passToNextGenerationCount: Int = 20,
                                 selectTopToMutatate: Int = 60,
 
                                 wavesToRemember: Int = 30,
 
-                                neuralNetStructure: NeuralNetStructure = NeuralNetStructureImpl(IndexedSeq(GameToNeuralOps.visionSize, 16, 16, 4), logisticCurve),
+                                neuralNetStructure: NeuralNetStructure =
+                                NeuralNetStructureImpl(IndexedSeq(GameToNeuralOps.visionSize, 9, 9, 4), logisticCurve),
                                 bitPerGene: Int = 8,
                                 conv: Int => Double = x => (x - 128) / 128.0,
                                 playerVision: (Game, Int) => IndexedSeq[Double] = GameToNeuralOps.playerVision,
                                 playerControl: (GameInstance, Int, IndexedSeq[Double]) => Unit = GameToNeuralOps.playerControl,
                                 fitnessFunction: (Game, Int) => Double = GameToNeuralOps.fitnessFunction,
 
-                                gameParams: GameParams = GameParams(area = V2(256, 256), initialFood = 50, foodPerTick = 0.2, initialSize = 10d, sizePerFood = 10d, dSizePerTick = 0.01)
+                                gameParams: GameParams = GameParams(area = V2(256, 256),
+                                  initialFood = 50,
+                                  maxFood = 50,
+                                  foodPerTick = 0.2,
+                                  initialSize = 10d,
+                                  sizePerFood = 10d,
+                                  dSizePerTick = 0.01)
                               ) {
   def genomeSizeBytes: Int = neuralNetStructure.workingNeurons + neuralNetStructure.synapsesCount
 
@@ -118,9 +125,9 @@ class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterPar
   val gameFieldX = 10
   val gameFieldY = 40
   val gameFieldPadding = 20
-  val gameFieldTotalWH = 1000
+  val gameFieldTotalWH = 700
 
-  val gameFieldSize = gameFieldTotalWH - gameFieldPadding
+  val gameFieldSize = gameFieldTotalWH
   val gameFieldScale = gameFieldSize / params.gameParams.area.x
 
   val gameSmallFieldSize = gameFieldTotalWH / gameFieldRowColums - gameFieldPadding
@@ -148,8 +155,15 @@ class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterPar
           val xi = i % gameFieldRowColums
           val yi = i / gameFieldRowColums
 
-          w.gameInstance.draw(g, gameFieldX + xi * gameSmallFieldSizeWithPadding, gameFieldY + yi * gameSmallFieldSizeWithPadding, gameSmallFieldScale,
+          val fx = gameFieldX + xi * gameSmallFieldSizeWithPadding
+          val fy = gameFieldY + yi * gameSmallFieldSizeWithPadding
+          w.gameInstance.draw(g, fx, fy, gameSmallFieldScale,
             if (i == selectedPlayerWave) selectedPlayerId.toSeq else Seq())
+          if(selectedPlayerId.nonEmpty && i == selectedPlayerWave){
+            GameToNeuralOps.playerVisionWithDrawing(w.gameInstance.gameData, selectedPlayerId.get, Some(g),
+              fx, fy, gameSmallFieldScale
+              )
+          }
         }
       } else {
         currentWaves(showFieldId % currentWaves.size).gameInstance.draw(g, gameFieldX, gameFieldY, gameFieldScale,
@@ -167,7 +181,7 @@ class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterPar
     if (selectedPlayerId.nonEmpty) {
       currentWaves(selectedPlayerWave).players.find(_.pId == selectedPlayerId.get) match
         case Some(p) =>
-          NeuralNetDrawer.draw(p.neuralNet, 1250, 40, 600, 600, g)
+          NeuralNetDrawer.draw(p.neuralNet, 700, 200, 600, 600, g)
         case None =>
     }
   }

@@ -2,24 +2,41 @@ package NNAgar.game
 
 import NNAgar.game.GameModel.{Game, Player}
 
+import java.awt.Graphics2D
 import scala.collection.immutable.IndexedSeq
 
 object GameToNeuralOps {
 
 
-  val visionSectors = 16
+  val visionSectors = 8
 
   val visionSize = visionSectors * 4 + 3
   val maxVisionDistance: Double = 300
   val maxSize: Double = 1000
 
-  def playerVision(g: Game, pId: Int): IndexedSeq[Double] = {
+  def playerVision(g: Game, pId: Int): IndexedSeq[Double] =
+    playerVisionWithDrawing(g, pId, None, 0, 0, 1.0)
+
+  def playerVisionWithDrawing(g: Game, pId: Int, grOpt: Option[Graphics2D],
+                   dx: Int = 0, dy: Int = 0, scale: Double = 1.0): IndexedSeq[Double] = {
     val p = g.player(pId)
     val ownPos = p.pos / g.params.area
 
+
+    val pgx = dx + p.pos.x * scale
+    val pgy = dy + p.pos.y * scale
+
     val sectorsData:Seq[Seq[Double]] = for(i <- 0 until visionSectors) yield {
-      val sectorBegin = math.Pi * i / visionSectors
-      val sectorEnd = math.Pi * (i + 1) / visionSectors
+
+      val sectorBegin = math.Pi * 2d * i / visionSectors
+      val sectorEnd = math.Pi * 2d * (i + 1) / visionSectors
+
+      //draw
+      for(gr <- grOpt) {
+        val rayEndXX = pgx + maxVisionDistance * scale * math.cos(sectorBegin)
+        val rayEndXY = pgy + maxVisionDistance * scale * math.sin(sectorBegin)
+        gr.drawLine(pgx.toInt, pgy.toInt, rayEndXX.toInt, rayEndXY.toInt)
+      }
 
       val foodDist = g.food.filter{f =>
         val dist = p.pos - f

@@ -71,6 +71,7 @@ class GameInstance(p: GameParams = GameParams()) {
 
     val tFBegin = gameData.tick * gameData.params.foodPerTick
     val tFEnd = (gameData.tick + 1) * gameData.params.foodPerTick
+    if(gameData.food.size < gameData.params.maxFood)
     for (_ <- tFBegin.ceil.toInt until tFEnd.ceil.toInt) spawnFood()
   }
 
