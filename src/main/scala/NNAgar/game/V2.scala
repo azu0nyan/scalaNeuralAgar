@@ -13,8 +13,8 @@ case class V2(x: Double, y: Double) {
   def **(ot: V2): Double = x * ot.x + y * ot.y
 
   def rotate(a: Double): V2 = V2(
-    x * math.sin(a) + y * math.cos(a),
-    x * math.cos(a) - y * math.sin(a))
+    x * math.cos(a) - y * math.sin(a),
+    x * math.sin(a) + y * math.cos(a))
 
 
   def length: Double = math.sqrt(x * x + y * y)

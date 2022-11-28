@@ -3,6 +3,7 @@ package NNAgar.game
 import NNAgar.game.GameModel.*
 
 import java.awt.{Color, Font, Graphics2D}
+import scala.util.Random
 
 class GameInstance(p: GameParams = GameParams()) {
 
@@ -11,7 +12,11 @@ class GameInstance(p: GameParams = GameParams()) {
 
 
   def spawnPlayer(): Int = {
-    val np = Player(gameData.deadPlayers.size + gameData.alivePlayers.size + 1, Helpers.randomInArea(gameData.params.area), V2(0, 0), gameData.params.initialSize, gameData.tick)
+    val np = Player(gameData.deadPlayers.size + gameData.alivePlayers.size + 1,
+      Helpers.randomInArea(gameData.params.area), V2(0, 0),
+      gameData.params.initialSize,
+      gameData.tick,
+      lookDir = new V2(1, 0).rotate(new Random().nextDouble() * Math.PI * 2d))
     gameData = gameData.copy(alivePlayers = gameData.alivePlayers :+ np)
 
     //    println(s"Player ${np.id} spawned at ${np.pos}.")
@@ -26,7 +31,7 @@ class GameInstance(p: GameParams = GameParams()) {
     gameData.alivePlayers.indexWhere(_.id == playerId) match
       case -1 =>
       case pId =>
-        val np = gameData.alivePlayers(pId).copy(dir = dir)
+        val np = gameData.alivePlayers(pId).copy(controlDir = dir)
         gameData = gameData.copy(alivePlayers = gameData.alivePlayers.updated(pId, np))
   }
 
@@ -45,12 +50,22 @@ class GameInstance(p: GameParams = GameParams()) {
 
     val (newAliveT, newDeadT) = af
       .map { p =>
-        val tryPos = p.pos + p.dir * gameData.params.tickTime * gameData.params.speed(p.size)
+        //        val tryPos = p.pos + p.dir * gameData.params.tickTime * gameData.params.speed(p.size)//x,y movement
+        val a = gameData.params.angleSpeedMax * gameData.params.tickTime * math.max(-1d, math.min(1d, p.controlDir.x))
+        val newLookDir = p.lookDir.rotate(a)
+        val tryPos = p.pos + newLookDir * gameData.params.tickTime * gameData.params.speed(p.size) //dir = lr, speed
+        if(math.abs(a) > 0.4) {
+          println()
+        }
+
         val newPos = V2(math.max(0, math.min(gameData.params.area.x, tryPos.x)), math.max(0, math.min(gameData.params.area.y, tryPos.y)))
         val dmg = (newPos - tryPos).length
 
-        p.copy(pos = newPos,
-          distanceTraveled = p.distanceTraveled + (p.pos - newPos).length, size = math.max(0, p.size - dmg - gameData.params.dSizePerTick))
+        p.copy(
+          pos = newPos,
+          distanceTraveled = p.distanceTraveled + (p.pos - newPos).length,
+          size = math.max(0, p.size - dmg - gameData.params.dSizePerTick),
+          lookDir = newLookDir)
       }.sortBy(-_.size)
       .foldLeft((Seq[Player](), Seq[Player]())) {
         case ((alive, dead), canBeEaten) => alive.find(a => a.intersects(canBeEaten)) match
@@ -71,12 +86,12 @@ class GameInstance(p: GameParams = GameParams()) {
 
     val tFBegin = gameData.tick * gameData.params.foodPerTick
     val tFEnd = (gameData.tick + 1) * gameData.params.foodPerTick
-    if(gameData.food.size < gameData.params.maxFood)
-    for (_ <- tFBegin.ceil.toInt until tFEnd.ceil.toInt) spawnFood()
+    if (gameData.food.size < gameData.params.maxFood)
+      for (_ <- tFBegin.ceil.toInt until tFEnd.ceil.toInt) spawnFood()
   }
 
 
-  def draw(gr: Graphics2D, x: Double, y: Double, scale: Double, selectedPlayers:Seq[Int]): Unit = {
+  def draw(gr: Graphics2D, x: Double, y: Double, scale: Double, selectedPlayers: Seq[Int]): Unit = {
     gr.setColor(Color.BLACK)
     gr.fillRect(x.toInt, y.toInt, (scale * gameData.params.area.x).toInt, (scale * gameData.params.area.y).toInt)
 
@@ -88,7 +103,7 @@ class GameInstance(p: GameParams = GameParams()) {
     }
 
     for (p <- gameData.alivePlayers) {
-      if(selectedPlayers.contains(p.id)){
+      if (selectedPlayers.contains(p.id)) {
         gr.setColor(new Color(0, 255, 232))
       } else {
         gr.setColor(new Color(255, 200, 200, 30))
@@ -106,12 +121,24 @@ class GameInstance(p: GameParams = GameParams()) {
         ((p.rad * scale).ceil * 2).toInt,
         ((p.rad * scale).ceil * 2).toInt)
 
-      if(y.toInt + (p.pos.y * scale - p.rad * scale).toInt <= 30)
-        println()
-//      gr.setColor(new Color(255, 255, 255))
-//      gr.setFont(new Font("", Font.BOLD, 12))
-//      gr.drawString(p.id.toInt.toString + " " + p.size.toInt.toString, p.pos.x.toInt, p.pos.y.toInt)
-//
+//      if (y.toInt + (p.pos.y * scale - p.rad * scale).toInt <= 30)
+//        println()
+      //      gr.setColor(new Color(255, 255, 255))
+      //      gr.setFont(new Font("", Font.BOLD, 12))
+      //      gr.drawString(p.id.toInt.toString + " " + p.size.toInt.toString, p.pos.x.toInt, p.pos.y.toInt)
+      //
+
+      if (selectedPlayers.contains(p.id)) {
+        gr.setColor(new Color(0, 100, 255))
+        val vd = p.lookDir * gameData.params.speed(p.size) * scale * 0.2
+        val vad = p.lookDir * gameData.params.speed(p.size) * scale * p.controlDir.y * 0.2
+        val xPos = (x + p.pos.x * scale).toInt
+        val yPos = (y + p.pos.y * scale).toInt
+        gr.setColor(new Color(0, 100, 255))
+        gr.drawLine(xPos, yPos, xPos + vd.x.toInt, yPos + vd.y.toInt)
+        gr.setColor(new Color(0, 255, 100))
+        gr.drawLine(xPos, yPos, xPos + vad.x.toInt, yPos + vad.y.toInt)
+      }
     }
 
   }

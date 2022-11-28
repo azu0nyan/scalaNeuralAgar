@@ -13,14 +13,17 @@ object GameModel {
                         foodPerTick: Double = 0.2,
                         area: V2 = V2(1000, 1000),
                         dSizePerTick: Double = 0.02,
+
+                        angleSpeedMax: Double = 12 * Math.PI ,
                         speed: Double => Double = size => math.max(10, 400 - 400 * size / 1000d),
                         seed: Int = new Random().nextInt())
 
   case class Player(id: Int,
-                    pos: V2, dir: V2,
+                    pos: V2, controlDir: V2,
                     size: Double,
                     spawnedAt: Int = 0,
                     deadAt: Option[Int] = None,
+                    lookDir: V2 = V2(1, 0),
                     eatenEnemy: Double = 0,
                     eatenFood: Double = 0,
                     distanceTraveled: Double = 0) {
