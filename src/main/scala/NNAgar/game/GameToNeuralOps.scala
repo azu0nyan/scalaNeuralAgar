@@ -108,8 +108,8 @@ object GameToNeuralOps {
 //    val travelCoeff = 1.3 * player.distanceTraveled / g.params.speed(g.params.initialSize)
 // +
      /*player.distanceTraveled / 1000d  +*/
-    player.eatenFood * 40 + math.pow(player.eatenEnemy, 1.2) + 30 * player.aliveSec(g) + 2 * player.size +
-      (if(player.deadAt.nonEmpty) -2000 else 0)
+    player.eatenFood * 150 + math.pow(player.eatenEnemy, 1.2) + 30 * player.aliveSec(g) + 2 * player.size //+
+//      (if(player.deadAt.nonEmpty) -2000 else 0)
   }
 
   def playerControl(gi: GameInstance, pId: Int, act: IndexedSeq[Double]): Unit = {

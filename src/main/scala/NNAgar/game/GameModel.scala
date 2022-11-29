@@ -50,6 +50,17 @@ object GameModel {
   case class Obstacle(min:V2, max:V2) {
     def width: Double = max.x - min.x
     def height: Double = max.y - min.y
+//    def intersection(origin:V2, end: V2):Option[V2] = {
+//      sides.flatMap{case (s, e) => Helpers.segmentIntersection(s,e, origin, end)}
+//    }
+//
+//    def sides:Seq[(V2, V2)]= Seq(
+//      min,
+//      V2(min.x, max.y),
+//      max,
+//      V2(max.x, min.y)
+//    )
+
   }
 
   case class Game(params: GameParams = GameParams(),
