@@ -2,7 +2,7 @@ package NNAgar.game
 
 import NNAgar.game.GameModel.{Game, Player}
 
-import java.awt.{Color, Graphics2D}
+import java.awt.{BasicStroke, Color, Graphics2D}
 import scala.collection.immutable.IndexedSeq
 
 object GameToNeuralOps {
@@ -41,7 +41,8 @@ object GameToNeuralOps {
       for(gr <- grOpt) {
         val rayEndXX = pgx + visionDistance * scale * math.cos(sectorBegin)
         val rayEndXY = pgy + visionDistance * scale * math.sin(sectorBegin)
-        gr.setColor(new Color(255, 20, 200))
+        gr.setStroke(new BasicStroke(0.7f))
+        gr.setColor(new Color(255, 20, 200, 110))
         gr.drawLine(pgx.toInt, pgy.toInt, rayEndXX.toInt, rayEndXY.toInt)
       }
 
@@ -57,7 +58,8 @@ object GameToNeuralOps {
         val a = dist.angleToOx
         dist.length < visionDistance && inAngle(sectorBegin, sectorEnd, a)
       }.minByOption(f => (p.pos - f).length )){
-        gr.setColor(new Color(0, 255, 0))
+        gr.setStroke(new BasicStroke(0.7f))
+        gr.setColor(new Color(0, 155, 0))
         val fX = dx + f.x * scale
         val fY = dy + f.y * scale
         gr.drawLine(pgx.toInt, pgy.toInt, fX.toInt, fY.toInt)
@@ -81,6 +83,7 @@ object GameToNeuralOps {
         val angle = dist.angleToOx
         dist.length < visionDistance && inAngle(sectorBegin, sectorEnd, angle)
       ).minByOption(e => ((p.pos - e.pos).length / visionDistance, e.size / maxSize))) {
+        gr.setStroke(new BasicStroke(0.7f))
         gr.setColor(new Color(255, 0, 0))
         val pX = dx + p.pos.x * scale
         val pY = dy + p.pos.y * scale
@@ -105,7 +108,7 @@ object GameToNeuralOps {
 //    val travelCoeff = 1.3 * player.distanceTraveled / g.params.speed(g.params.initialSize)
 // +
      /*player.distanceTraveled / 1000d  +*/
-    player.eatenFood * 40 + player.eatenEnemy * 50 + 30 * player.aliveSec(g) + 2 * player.size +
+    player.eatenFood * 40 + math.pow(player.eatenEnemy, 1.2) + 30 * player.aliveSec(g) + 2 * player.size +
       (if(player.deadAt.nonEmpty) -2000 else 0)
   }
 

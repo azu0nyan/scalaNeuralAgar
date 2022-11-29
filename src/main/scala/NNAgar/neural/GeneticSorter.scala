@@ -11,10 +11,10 @@ import scala.util.Random
 
 
 case class GeneticSorterParams(
-                                playersOnMap: Int = 20,
+                                playersOnMap: Int = 25,
                                 spawnToReachTarget: Boolean = false,
                                 threads: Int = 9,
-                                generationSize: Int = 20 * 9,
+                                generationSize: Int = 25 * 9,
                                 generationTicks: Int => Int = {
                                   case x if x < 10 => 5 * 60
                                   case x if x < 100 => (x / 2) * 60
@@ -23,11 +23,12 @@ case class GeneticSorterParams(
 
                                 passToNextGenerationCount: Int = 2 * 9,
                                 selectTopToMutatate: Int = 4 * 9,
+                                flipBits:Int = 128,
 
                                 wavesToRemember: Int = 25,
 
                                 neuralNetStructure: NeuralNetStructure =
-                                NeuralNetStructureImpl(IndexedSeq(GameToNeuralOps.visionSize, 12, 12,  4), logisticCurve),
+                                NeuralNetStructureImpl(IndexedSeq(GameToNeuralOps.visionSize, 12, 12, 4), logisticCurve),
                                 bitPerGene: Int = 8,
                                 conv: Int => Double = x => (x - 128) / 128.0,
                                 playerVision: (Game, Int) => IndexedSeq[Double] = GameToNeuralOps.playerVision,
@@ -40,7 +41,9 @@ case class GeneticSorterParams(
                                   foodPerTick = 0.4,
                                   initialSize = 10d,
                                   sizePerFood = 10d,
-                                  dSizePerTick = 0.01)
+                                  dSizePerTick = 0.01,
+                                  speed = x => math.max(10, 400 - (x / 4))
+                                )
                               ) {
   def genomeSizeBytes: Int = neuralNetStructure.workingNeurons + neuralNetStructure.synapsesCount
 
@@ -51,9 +54,13 @@ class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterPar
 
   //  var waves: Seq[Wave] = Seq(new Wave("Initial", params = params, genomes = for (i <- 0 until params.generationSize) yield GenomeOps.randomGenome(params.genomeSizeBytes)))
   //
-  var sleep: Long = 20
   var drawGame: Boolean = true
+
+  var sleep: Long = 20
   var pause: Boolean = false
+  var pauseOnNewWave: Boolean = false
+  var overrideRoundTicks: Option[Int] = None
+
   var showFieldId: Int = -1
 
   //  def wave: Wave = waves.last
@@ -71,7 +78,9 @@ class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterPar
 
   def startWave(genomes: Seq[Genome]): Unit = {
     println(s"Starting wave ${history.size}")
-
+    if (pauseOnNewWave) {
+      pause = true
+    }
     c = new CountDownLatch(params.threads)
     val perThread = genomes.size / params.threads
     val genomesPerThread = genomes.sliding(perThread, perThread).toSeq
@@ -80,11 +89,17 @@ class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterPar
       val wave = new Wave(s"w:${waveId} t:$i", params, genomesPerThread(i))
       new Thread(() => {
         var i = 0
-        while (i < params.generationTicks(waveId)) {
+        while (i < {
+          overrideRoundTicks match
+            case Some(o) => o
+            case None => params.generationTicks(waveId)
+        }) {
           if (!pause) {
             wave.tick()
             if (wave.gameInstance.gameData.alivePlayers.isEmpty) {
-              i = params.generationTicks(waveId)
+              i = overrideRoundTicks match
+                case Some(o) => o
+                case None => params.generationTicks(waveId)
             }
             i = i + 1
           } else {
@@ -111,8 +126,9 @@ class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterPar
         val topGenomes = currentWaves.flatMap(_.topGenomes.take(params.selectTopToMutatate / params.threads))
         val topToNextWave = currentWaves.flatMap(_.topGenomes.take(params.passToNextGenerationCount / params.threads))
         val r = new Random()
+        
         val newGenomes = (for (i <- 0 until (params.generationSize - params.passToNextGenerationCount))
-          yield GenomeOps.mix(topGenomes(r.nextInt(topGenomes.size)), topGenomes(r.nextInt(topGenomes.size)))).map(GenomeOps.flipRandomBits(_, r.nextInt(64)))
+          yield GenomeOps.mix(topGenomes(r.nextInt(topGenomes.size)), topGenomes(r.nextInt(topGenomes.size)))).map(GenomeOps.flipRandomBits(_, r.nextInt(params.flipBits)))
 
         val shuffled = new Random().shuffle(topToNextWave ++ newGenomes)
 
@@ -204,14 +220,14 @@ class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterPar
       val id = xi + yi * gameFieldRowColums
       if (0 <= id && id < currentWaves.size) {
         val w = currentWaves(id)
-        selectedPlayerId = w.players.minByOption(p => (p.player.pos - pos).length).map(_.pId)
+        selectedPlayerId = w.players.filter(_.player.alive).minByOption(p => (p.player.pos - pos).length).map(_.pId)
         selectedPlayerWave = id
       }
     } else {
       val xC = (x - gameFieldX) % gameFieldSize
       val yC = (y - gameFieldY) % gameFieldSize
       val pos = V2(xC / gameFieldScale, yC / gameFieldScale)
-      selectedPlayerId = currentWaves(showFieldId % currentWaves.size).players.minByOption(p => (p.player.pos - pos).length).map(_.pId)
+      selectedPlayerId = currentWaves(showFieldId % currentWaves.size).players.filter(_.player.alive).minByOption(p => (p.player.pos - pos).length).map(_.pId)
       selectedPlayerWave = showFieldId % currentWaves.size
     }
   }
@@ -223,7 +239,7 @@ class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterPar
     val maxLines = 30
 
     g.setColor(Color.WHITE)
-    g.fillRect(x, y, 300, dy * math.min(history.size, maxLines))
+    g.fillRect(x, y, 400, dy * math.min(history.size, maxLines))
 
     g.setColor(Color.BLACK)
     g.setFont(new Font("", Font.PLAIN, 12))
@@ -235,6 +251,9 @@ class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterPar
       g.drawString(f"av: ${avgFit}%.1f max ${maxFit}%.1f", x + 100, y + i * dy + 25)
 
     }
+
+    g.drawString(currentWaves.map(_.ticks).mkString(" "), x + 300, y + dy)
+
   }
 
 

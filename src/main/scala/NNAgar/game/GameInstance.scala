@@ -2,14 +2,24 @@ package NNAgar.game
 
 import NNAgar.game.GameModel.*
 
-import java.awt.{Color, Font, Graphics2D}
+import java.awt.{BasicStroke, Color, Font, Graphics2D}
 import scala.util.Random
 
 class GameInstance(p: GameParams = GameParams()) {
 
   var gameData: Game = Game(params = p)
+
+  for (i <- 0 until p.initialFood) spawnFood()
   for (i <- 0 until p.initialFood) spawnFood()
 
+  def spawnObstacle(): Unit = {
+    val r = new Random()
+    val lr = Helpers.randomInArea(p.obstacleDelta)
+    val center = Helpers.randomInArea(gameData.params.area)
+    val min = center - lr * 0.5d
+    val max = center + lr * 0.5d
+    gameData = gameData.copy(obstacles = gameData.obstacles :+ Obstacle(min, max))
+  }
 
   def spawnPlayer(): Int = {
     val np = Player(gameData.deadPlayers.size + gameData.alivePlayers.size + 1,
@@ -51,12 +61,11 @@ class GameInstance(p: GameParams = GameParams()) {
     val (newAliveT, newDeadT) = af
       .map { p =>
         //        val tryPos = p.pos + p.dir * gameData.params.tickTime * gameData.params.speed(p.size)//x,y movement
-        val a = gameData.params.angleSpeedMax * gameData.params.tickTime * math.max(-1d, math.min(1d, p.controlDir.x))
-        val newLookDir = p.lookDir.rotate(a)
-        val tryPos = p.pos + newLookDir * gameData.params.tickTime * gameData.params.speed(p.size) //dir = lr, speed
-        if(math.abs(a) > 0.4) {
-          println()
-        }
+        val rotationAngle = gameData.params.angleSpeedMax * gameData.params.tickTime * math.max(-1d, math.min(1d, p.controlDir.x))
+        val newLookDir = p.lookDir.rotate(rotationAngle)
+
+        val speedControl = math.max(-1d, math.min(1d, p.controlDir.y))
+        val tryPos = p.pos + newLookDir * gameData.params.tickTime * gameData.params.speed(p.size) * (if(speedControl > 0) speedControl else speedControl * 0.70)//dir = lr, speed
 
         val newPos = V2(math.max(0, math.min(gameData.params.area.x, tryPos.x)), math.max(0, math.min(gameData.params.area.y, tryPos.y)))
         val dmg = (newPos - tryPos).length
@@ -129,15 +138,21 @@ class GameInstance(p: GameParams = GameParams()) {
       //
 
       if (selectedPlayers.contains(p.id)) {
+        gr.setStroke(new BasicStroke(2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND))
         gr.setColor(new Color(0, 100, 255))
         val vd = p.lookDir * gameData.params.speed(p.size) * scale * 0.2
-        val vad = p.lookDir * gameData.params.speed(p.size) * scale * p.controlDir.y * 0.2
+        val vlr = p.lookDir.rotate(Math.PI / 2d) * gameData.params.speed(p.size) * scale * p.controlDir.x * 0.2
+        val vSpeed = p.lookDir * gameData.params.speed(p.size) * scale * p.controlDir.y * 0.2
+
         val xPos = (x + p.pos.x * scale).toInt
         val yPos = (y + p.pos.y * scale).toInt
         gr.setColor(new Color(0, 100, 255))
         gr.drawLine(xPos, yPos, xPos + vd.x.toInt, yPos + vd.y.toInt)
+        gr.setStroke(new BasicStroke(4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND))
         gr.setColor(new Color(0, 255, 100))
-        gr.drawLine(xPos, yPos, xPos + vad.x.toInt, yPos + vad.y.toInt)
+        gr.drawLine(xPos, yPos, xPos + vSpeed.x.toInt, yPos + vSpeed.y.toInt)
+        gr.setColor(new Color(222, 127, 20))
+        gr.drawLine(xPos, yPos, xPos + vlr.x.toInt, yPos + vlr.y.toInt)
       }
     }
 

@@ -14,9 +14,15 @@ object GameModel {
                         area: V2 = V2(1000, 1000),
                         dSizePerTick: Double = 0.02,
 
+                        initialObstacles: Int = 4,
+                        obstacleMin:V2 = V2(100, 100),
+                        obstacleMax:V2 = V2(550, 250),
+
                         angleSpeedMax: Double = 12 * Math.PI ,
                         speed: Double => Double = size => math.max(10, 400 - 400 * size / 1000d),
-                        seed: Int = new Random().nextInt())
+                        seed: Int = new Random().nextInt()){
+    def obstacleDelta:V2 = obstacleMax - obstacleMin
+  }
 
   case class Player(id: Int,
                     pos: V2, controlDir: V2,
@@ -41,7 +47,13 @@ object GameModel {
 
   }
 
+  case class Obstacle(min:V2, max:V2) {
+    def width: Double = max.x - min.x
+    def height: Double = max.y - min.y
+  }
+
   case class Game(params: GameParams = GameParams(),
+                  obstacles: Seq[Obstacle] = Seq(),
                   alivePlayers: Seq[Player] = Seq(),
                   food: Seq[V2] = Seq(),
                   tick: Int = 0,
