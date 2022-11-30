@@ -94,14 +94,14 @@ object GameToNeuralOps {
         val dist = p.pos - enemy.pos
         val angle = dist.angleToOx
         dist.length < visionDistance && inAngle(sectorBegin, sectorEnd, angle)
-      ).map(e => (((p.pos - e.pos).length -p.rad)/ baseVisionDistance, e.size / maxSize)).minByOption(_._1).getOrElse((1d, 0d))
+      ).map(e => (((p.pos - e.pos).length -p.rad)/ baseVisionDistance, e.size )).minByOption(_._1).getOrElse((1d, 0d))
 
       //draw
       for (gr <- grOpt; p <- g.alivePlayers.filter(_.id != pId).filter(enemy =>
         val dist = p.pos - enemy.pos
         val angle = dist.angleToOx
         dist.length < visionDistance && inAngle(sectorBegin, sectorEnd, angle)
-      ).minByOption(e => ((p.pos - e.pos).length / visionDistance, e.size / maxSize))) {
+      ).minByOption(e => ((p.pos - e.pos).length, e.size))) {
         gr.setStroke(new BasicStroke(0.7f))
         gr.setColor(new Color(255, 0, 0))
         val pX = dx + p.pos.x * scale
@@ -109,7 +109,7 @@ object GameToNeuralOps {
         gr.drawLine(pgx.toInt, pgy.toInt, pX.toInt, pY.toInt)
       }
 
-      Seq(1 - collisionDist.map(c => (c - p.rad) / baseVisionDistance).getOrElse(1d), 1 - enemyDist, enemySize / maxSize, 1 - foodDist, math.min(0d, foodSize / 16d) )
+      Seq(1 - collisionDist.map(c => (c - p.rad) / baseVisionDistance).getOrElse(1d), 1 - enemyDist, if(enemySize < p.size) 0 else 1 , 1 - foodDist, math.min(0d, foodSize / 5d) )
     }
 
     val sd = sectorsData.flatten.toIndexedSeq
@@ -117,7 +117,7 @@ object GameToNeuralOps {
     val reordered = for(param <- Seq(Seq(0), Seq(1, 2), Seq(3, 4));
         s <- 0 until visionSectors;
         p <- param
-        ) yield sd(5* s + p)
+        ) yield sd(5 * s + p)
 
     reordered.toIndexedSeq ++ IndexedSeq(p.size / maxSize)
 //    val res =  (sectorsData.flatten.toIndexedSeq) ++ IndexedSeq(
