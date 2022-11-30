@@ -69,22 +69,22 @@ object GameModel {
     )
 
     val sides:Seq[(V2, V2)]=  (vertices :+ vertices.head).sliding(2).map{case Seq(a, b) => (a,b)}.toSeq
-    
+
     def distance(p:V2):Double = {
-      if(p.x <= min.x) 
-        if (p.y <= min.y) (min - p).length 
+      if(p.x <= min.x)
+        if (p.y <= min.y) (min - p).length
         else if (p.y <= max.y) min.x - p.x
         else (V2(min.x, max.y) - p).length
       else if( p.x <= max.x)
         if (p.y <= min.y) min.y - p.y
         else if (p.y <= max.y) -1 //inside
-        else max.y - p.y 
-      else 
+        else p.y - max.y
+      else
         if (p.y <= min.y) (V2(max.x, min.y) - p).length
-        else if (p.y <= max.y) p.x - max.x 
+        else if (p.y <= max.y) p.x - max.x
         else (max - p).length
 
-    } 
+    }
 
   }
 
@@ -94,10 +94,10 @@ object GameModel {
                   food: Seq[V2] = Seq(),
                   tick: Int = 0,
                   deadPlayers: Seq[Player] = Seq()){
-    
+
     def player(id:Int): Player = alivePlayers.find(_.id == id).getOrElse(deadPlayers.find(_.id == id).get)
     def playerCount:Int = alivePlayers.size + deadPlayers.size
-    
+
     val border:Seq[Obstacle] =
       Seq(
         Obstacle(V2(0, -100), V2(params.area.x, 0)),

@@ -11,10 +11,10 @@ import scala.util.Random
 
 
 case class GeneticSorterParams(
-                                playersOnMap: Int = 25,
+                                playersOnMap: Int = 15,
                                 spawnToReachTarget: Boolean = false,
                                 threads: Int = 9,
-                                generationSize: Int = 25 * 9,
+                                generationSize: Int = 15 * 9,
                                 generationTicks: Int => Int = {
                                   case x if x < 10 => 5 * 60
                                   case x if x < 100 => (x / 2) * 60
@@ -23,7 +23,7 @@ case class GeneticSorterParams(
 
                                 passToNextGenerationCount: Int = 2 * 9,
                                 selectTopToMutatate: Int = 4 * 9,
-                                flipBits:Int = 128,
+                                flipBits: Int = 256,
 
                                 wavesToRemember: Int = 25,
 
@@ -43,10 +43,15 @@ case class GeneticSorterParams(
                                   sizePerFood = 10d,
                                   dSizePerTick = 0.01,
 
-                                  initialObstacles = 12,
-                                  obstacleMin = V2(32, 32),
-                                  obstacleMax = V2(32, 32),
-                                  obstacleGridSize = 8,
+                                  //                                  initialObstacles = 12,
+                                  //                                  obstacleMin = V2(32, 32),
+                                  //                                  obstacleMax = V2(32, 32),
+
+                                  initialObstacles = 0,
+                                  obstacleMin = V2(256/3, 256/3),
+                                  obstacleMax = V2(256/3, 256/3),
+
+                                  obstacleGridSize = 3,
 
                                   speed = x => math.max(10, 400 - (x / 4))
                                 )
@@ -132,7 +137,7 @@ class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterPar
         val topGenomes = currentWaves.flatMap(_.topGenomes.take(params.selectTopToMutatate / params.threads))
         val topToNextWave = currentWaves.flatMap(_.topGenomes.take(params.passToNextGenerationCount / params.threads))
         val r = new Random()
-        
+
         val newGenomes = (for (i <- 0 until (params.generationSize - params.passToNextGenerationCount))
           yield GenomeOps.mix(topGenomes(r.nextInt(topGenomes.size)), topGenomes(r.nextInt(topGenomes.size)))).map(GenomeOps.flipRandomBits(_, r.nextInt(params.flipBits)))
 
