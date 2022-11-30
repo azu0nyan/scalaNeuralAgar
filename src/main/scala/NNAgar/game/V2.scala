@@ -1,5 +1,7 @@
 package NNAgar.game
 
+import NNAgar.game.Helpers.eps
+
 case class V2(x: Double, y: Double) {
   def +(o: V2): V2 = V2(x + o.x, y + o.y)
 
@@ -34,4 +36,8 @@ case class V2(x: Double, y: Double) {
   def angleToOx: Double = to0twoPi(math.atan2(y, x))
   /** 0 -> 2 PI */
   def angle(ot: V2): Double = to0twoPi(math.atan2(ot.y - this.y, ot.x - this.x))
+  
+  
+  
+  def ~=(ot:V2) :Boolean = math.abs(x - ot.x) < eps && math.abs(y - ot.y) < eps  
 }

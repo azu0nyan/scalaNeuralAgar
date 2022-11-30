@@ -15,8 +15,9 @@ object GameModel {
                         dSizePerTick: Double = 0.02,
 
                         initialObstacles: Int = 4,
-                        obstacleMin:V2 = V2(100, 100),
-                        obstacleMax:V2 = V2(550, 250),
+                        obstacleMin:V2 = V2(64, 64),
+                        obstacleMax:V2 = V2(64, 64),
+                        obstacleGridSize: Int = 4,
 
                         angleSpeedMax: Double = 12 * Math.PI ,
                         speed: Double => Double = size => math.max(10, 400 - 400 * size / 1000d),
@@ -50,16 +51,40 @@ object GameModel {
   case class Obstacle(min:V2, max:V2) {
     def width: Double = max.x - min.x
     def height: Double = max.y - min.y
-//    def intersection(origin:V2, end: V2):Option[V2] = {
-//      sides.flatMap{case (s, e) => Helpers.segmentIntersection(s,e, origin, end)}
-//    }
-//
-//    def sides:Seq[(V2, V2)]= Seq(
-//      min,
-//      V2(min.x, max.y),
-//      max,
-//      V2(max.x, min.y)
-//    )
+
+    def contains(v:V2):Boolean =
+      min.x <= v.x && v.x <= max.x && min.y <= v.y && v.y <= max.y
+
+    /**Returns closest intersection*/
+    def intersection(origin:V2, end: V2):Option[V2] = {
+      sides.flatMap{case (s, e) => Helpers.segmentIntersection(s,e, origin, end)}.minByOption(v => (v - origin).length)
+    }
+
+
+    val vertices:Seq[V2]= Seq(
+      min,
+      V2(min.x, max.y),
+      max,
+      V2(max.x, min.y)
+    )
+
+    val sides:Seq[(V2, V2)]=  (vertices :+ vertices.head).sliding(2).map{case Seq(a, b) => (a,b)}.toSeq
+    
+    def distance(p:V2):Double = {
+      if(p.x <= min.x) 
+        if (p.y <= min.y) (min - p).length 
+        else if (p.y <= max.y) min.x - p.x
+        else (V2(min.x, max.y) - p).length
+      else if( p.x <= max.x)
+        if (p.y <= min.y) min.y - p.y
+        else if (p.y <= max.y) -1 //inside
+        else max.y - p.y 
+      else 
+        if (p.y <= min.y) (V2(max.x, min.y) - p).length
+        else if (p.y <= max.y) p.x - max.x 
+        else (max - p).length
+
+    } 
 
   }
 
@@ -69,9 +94,17 @@ object GameModel {
                   food: Seq[V2] = Seq(),
                   tick: Int = 0,
                   deadPlayers: Seq[Player] = Seq()){
-
+    
     def player(id:Int): Player = alivePlayers.find(_.id == id).getOrElse(deadPlayers.find(_.id == id).get)
     def playerCount:Int = alivePlayers.size + deadPlayers.size
+    
+    val border:Seq[Obstacle] =
+      Seq(
+        Obstacle(V2(0, -100), V2(params.area.x, 0)),
+        Obstacle(V2(-100, 0), V2(0, params.area.y)),
+        Obstacle(V2(params.area.x, 0), V2(params.area.x + 100, params.area.y)),
+        Obstacle(V2(0, params.area.y), V2(params.area.x, params.area.y + 100)),
+      )
   }
 
 

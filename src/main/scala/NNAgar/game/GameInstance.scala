@@ -9,21 +9,70 @@ class GameInstance(p: GameParams = GameParams()) {
 
   var gameData: Game = Game(params = p)
 
-  for (i <- 0 until p.initialFood) spawnFood()
+  spawnObstacles(p.initialObstacles, p.obstacleGridSize)
   for (i <- 0 until p.initialFood) spawnFood()
 
-  def spawnObstacle(): Unit = {
-    val r = new Random()
-    val lr = Helpers.randomInArea(p.obstacleDelta)
-    val center = Helpers.randomInArea(gameData.params.area)
+
+  def spawnObstacles(count: Int, gridSize: Int): Unit = {
+    if (count > 0) {
+
+      val freeCount = gridSize * gridSize - count
+      val g: Array[Array[Boolean]] = Array.ofDim(gridSize, gridSize)
+
+      val r = new Random()
+      val gx = r.nextInt(gridSize)
+      val gy = r.nextInt(gridSize)
+      g(gx)(gy) = true
+      var trys: Int = 0
+      var spawned: Int = 1
+      while (trys < 10000 && spawned < freeCount) {
+        val gx = r.nextInt(gridSize)
+        val gy = r.nextInt(gridSize)
+        if (
+          !g(gx)(gy) && (
+            gx > 0 && g(gx - 1)(gy) ||
+              gx < gridSize - 1 && g(gx + 1)(gy) ||
+              gy > 0 && g(gx)(gy - 1) ||
+              gy < gridSize - 1 && g(gx)(gy + 1))
+        ) {
+          g(gx)(gy) = true
+          spawned += 1
+        }
+
+
+        trys += 1
+      }
+      for (i <- 0 until gridSize; j <- 0 until (gridSize)) {
+        if (!g(i)(j)) {
+          spawnObstacle(i, j, gridSize)
+        }
+      }
+    }
+
+  }
+
+  def spawnObstacle(gx: Int, gy: Int, gridSize: Int): Unit = {
+    val lr = Helpers.randomInArea(p.obstacleDelta) + p.obstacleMin
+    //    val center = Helpers.randomInArea(gameData.params.area)
+    val center = V2((gx + 0.5) / gridSize, (gy + 0.5) / gridSize) * gameData.params.area
+
+
     val min = center - lr * 0.5d
     val max = center + lr * 0.5d
-    gameData = gameData.copy(obstacles = gameData.obstacles :+ Obstacle(min, max))
+    val cMin = V2(
+      math.max(0d, math.min(gameData.params.area.x, min.x)),
+      math.max(0d, math.min(gameData.params.area.y, min.y))
+    )
+    val cMax = V2(
+      math.max(0d, math.min(gameData.params.area.x, max.x)),
+      math.max(0d, math.min(gameData.params.area.y, max.y))
+    )
+    gameData = gameData.copy(obstacles = gameData.obstacles :+ Obstacle(cMin, cMax))
   }
 
   def spawnPlayer(): Int = {
     val np = Player(gameData.deadPlayers.size + gameData.alivePlayers.size + 1,
-      Helpers.randomInArea(gameData.params.area), V2(0, 0),
+      randomPosition(), V2(0, 0),
       gameData.params.initialSize,
       gameData.tick,
       lookDir = new V2(1, 0).rotate(new Random().nextDouble() * Math.PI * 2d))
@@ -33,8 +82,18 @@ class GameInstance(p: GameParams = GameParams()) {
     np.id
   }
 
+  def randomPosition(): V2 = {
+    var pos = Helpers.randomInArea(gameData.params.area)
+    var tr = 0
+    while (tr < 1000000 && gameData.obstacles.exists(_.contains(pos)))
+      pos = Helpers.randomInArea(gameData.params.area)
+      tr += 1
+
+    pos
+  }
+
   def spawnFood(): Unit = {
-    gameData = gameData.copy(food = gameData.food :+ Helpers.randomInArea(gameData.params.area))
+    gameData = gameData.copy(food = gameData.food :+ randomPosition())
   }
 
   def setMoveDirection(dir: V2, playerId: Int): Unit = {
@@ -65,15 +124,19 @@ class GameInstance(p: GameParams = GameParams()) {
         val newLookDir = p.lookDir.rotate(rotationAngle)
 
         val speedControl = math.max(-1d, math.min(1d, p.controlDir.y))
-        val tryPos = p.pos + newLookDir * gameData.params.tickTime * gameData.params.speed(p.size) * (if(speedControl > 0) speedControl else speedControl * 0.70)//dir = lr, speed
+        val tryPosQ = p.pos + newLookDir * gameData.params.tickTime * gameData.params.speed(p.size) * (if (speedControl > 0) speedControl else speedControl * 0.70) //dir = lr, speed
+        val tryObstaclePos = gameData.obstacles.flatMap(_.intersection(p.pos, tryPosQ)).minByOption(v => (v - p.pos).length) match
+          case Some(value) => value + (p.pos - value) * 0.01///p.pos + (value - p.pos) * 0.99 //clamp toOuter
+          case None => tryPosQ
 
-        val newPos = V2(math.max(0, math.min(gameData.params.area.x, tryPos.x)), math.max(0, math.min(gameData.params.area.y, tryPos.y)))
-        val dmg = (newPos - tryPos).length
+        val newPos = V2(math.max(0, math.min(gameData.params.area.x, tryObstaclePos.x)), math.max(0, math.min(gameData.params.area.y, tryObstaclePos.y)))
+        val dmgMovementDmg = (newPos - tryPosQ).length
+        val hitWallDmg = gameData.obstacles.map(_.distance(p.pos)).map(dist => p.rad - dist).filter(_  > 0).sum
 
         p.copy(
           pos = newPos,
           distanceTraveled = p.distanceTraveled + (p.pos - newPos).length,
-          size = math.max(0, p.size - dmg - gameData.params.dSizePerTick),
+          size = math.max(0, p.size - dmgMovementDmg - hitWallDmg - gameData.params.dSizePerTick),
           lookDir = newLookDir)
       }.sortBy(-_.size)
       .foldLeft((Seq[Player](), Seq[Player]())) {
@@ -104,6 +167,14 @@ class GameInstance(p: GameParams = GameParams()) {
     gr.setColor(Color.BLACK)
     gr.fillRect(x.toInt, y.toInt, (scale * gameData.params.area.x).toInt, (scale * gameData.params.area.y).toInt)
 
+
+    for (o <- gameData.obstacles) {
+      gr.setStroke(new BasicStroke(2, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, Array(1f, 1f), 0f))
+      gr.setColor(new Color(70, 70, 70))
+      gr.drawRect((x + o.min.x * scale).toInt, (y + o.min.y * scale).toInt, (o.width * scale).toInt, (o.height * scale).toInt)
+    }
+
+    gr.setStroke(new BasicStroke(1))
     for (f <- gameData.food) {
       gr.setColor(new Color(0, 255, 0, 70))
       gr.fillOval((x + f.x * scale - 3).toInt, (y + f.y * scale - 3).toInt, 6, 6)
@@ -130,8 +201,8 @@ class GameInstance(p: GameParams = GameParams()) {
         ((p.rad * scale).ceil * 2).toInt,
         ((p.rad * scale).ceil * 2).toInt)
 
-//      if (y.toInt + (p.pos.y * scale - p.rad * scale).toInt <= 30)
-//        println()
+      //      if (y.toInt + (p.pos.y * scale - p.rad * scale).toInt <= 30)
+      //        println()
       //      gr.setColor(new Color(255, 255, 255))
       //      gr.setFont(new Font("", Font.BOLD, 12))
       //      gr.drawString(p.id.toInt.toString + " " + p.size.toInt.toString, p.pos.x.toInt, p.pos.y.toInt)

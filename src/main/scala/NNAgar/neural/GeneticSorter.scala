@@ -42,6 +42,12 @@ case class GeneticSorterParams(
                                   initialSize = 10d,
                                   sizePerFood = 10d,
                                   dSizePerTick = 0.01,
+
+                                  initialObstacles = 12,
+                                  obstacleMin = V2(32, 32),
+                                  obstacleMax = V2(32, 32),
+                                  obstacleGridSize = 8,
+
                                   speed = x => math.max(10, 400 - (x / 4))
                                 )
                               ) {
