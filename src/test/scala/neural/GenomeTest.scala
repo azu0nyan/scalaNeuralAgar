@@ -7,9 +7,9 @@ import org.scalatest.funsuite.AnyFunSuite
 class GenomeTest extends AnyFunSuite{
   test("Mix 1"){
     println(s"mix 1")
-    val a: Genome = IndexedSeq(255.toByte,255.toByte)
-    val b: Genome = IndexedSeq(0.toByte,0.toByte)
-    val m = GenomeOps.mix(a, b)
+    val a: Genome = IndexedSeq(255.toByte,255.toByte, 0.toByte, 0.toByte, 0.toByte, 0.toByte)
+    val b: Genome = IndexedSeq(255.toByte,255.toByte, 255.toByte,255.toByte, 0.toByte, 0.toByte)
+    val m = GenomeOps.mix(a, b, 8)
     println(GenomeOps.toStringGenomeBinary(a))
     println(GenomeOps.toStringGenomeBinary(b))
     println(GenomeOps.toStringGenomeBinary(m))
@@ -20,7 +20,7 @@ class GenomeTest extends AnyFunSuite{
     println(s"Mix 2")
     val a: Genome = IndexedSeq(255.toByte, 255.toByte)
     val b: Genome = IndexedSeq(128.toByte, 31.toByte)
-    val m = GenomeOps.mix(a, b)
+    val m = GenomeOps.mix(a, b, 8)
     println(GenomeOps.toStringGenomeBinary(a))
     println(GenomeOps.toStringGenomeBinary(b))
     println(GenomeOps.toStringGenomeBinary(m))

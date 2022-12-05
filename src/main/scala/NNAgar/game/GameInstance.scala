@@ -145,9 +145,9 @@ class GameInstance(p: GameParams = GameParams()) {
             val eaterId = alive.indexOf(eater)
             val nA = alive.updated(eaterId, eater.copy(size = eater.size + canBeEaten.size))
 
-//            (nA, dead :+ canBeEaten.copy(deadAt = Some(gameData.tick), size = 0))
+            (nA, dead :+ canBeEaten.copy(deadAt = Some(gameData.tick), size = 0))
             ///////
-            (alive :+ canBeEaten, dead)
+//            (alive :+ canBeEaten, dead)
           case None => (alive :+ canBeEaten, dead)
       }
     val (newAlive, moreDead) = newAliveT.partition(p => p.size > 0)

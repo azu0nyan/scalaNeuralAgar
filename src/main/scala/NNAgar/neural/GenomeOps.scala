@@ -6,21 +6,21 @@ import scala.util.Random
 object GenomeOps {
   type Genome = IndexedSeq[Byte]
 
-  def randomGenome(length: Int):Genome = {
+  def randomGenome(length: Int): Genome = {
     new Random().nextBytes(length)
   }
 
-  def toGenes[GENE](genome: Genome, toGene: Int => GENE, bitsPerGene:Int = 8): IndexedSeq[GENE] = {
+  def toGenes[GENE](genome: Genome, toGene: Int => GENE, bitsPerGene: Int = 8): IndexedSeq[GENE] = {
     var cur = 0
     var cId = 0
     val res: mutable.Buffer[GENE] = mutable.Buffer()
 
-    for(byte <- genome; bit <- 0 until 8){
+    for (byte <- genome; bit <- 0 until 8) {
       val toSet = (byte >> bit) & 1
       val geneBit = cId % bitsPerGene
       cur = cur | (toSet << geneBit)
       cId += 1
-      if(cId % bitsPerGene == 0){
+      if (cId % bitsPerGene == 0) {
         res += toGene(cur)
         cur = 0
       }
@@ -28,7 +28,32 @@ object GenomeOps {
     res.toIndexedSeq
   }
 
-  def mix(a: Genome, b: Genome): Genome = {
+
+  def mix(a: Genome, b: Genome, cuts: Int): Genome = {
+    val r = new Random()
+    val cutPosR = Seq.fill(cuts)(r.nextInt(a.size * 8)).distinct.sorted
+    val cutPos = 0 +: cutPosR :+ (a.size * 8)
+
+    val aStr = toStringGenomeBinary(a, None)
+    val bStr = toStringGenomeBinary(b, None)
+
+    val newGenome = cutPos.sliding(2).zipWithIndex.map {
+      case (Seq(f, t), id) if id % 2 == 0 => aStr.substring(f, t)
+      case (Seq(f, t), _) => bStr.substring(f, t)
+    }.mkString("")
+//    println(newGenome)
+
+    newGenome.sliding(8, 8).map { s =>
+      var b: Byte = 0
+      for (i <- 0 until 8 if s(i) == '1') {
+        b = (b | (1 << i)).toByte
+      }
+      b
+    }.toIndexedSeq
+  }
+
+
+  def mixBitwise(a: Genome, b: Genome): Genome = {
     val r = new Random()
     val res = r.nextBytes(a.size)
     for (i <- res.indices)
@@ -36,6 +61,7 @@ object GenomeOps {
 
     res
   }
+
 
   def flipRandomBits(a: Genome, bits: Int): Genome = {
     val res = a.toArray
@@ -50,16 +76,18 @@ object GenomeOps {
     res
   }
 
-  def toStringGenomeBinary(a:Genome, groupSize: Int = 8): String = {
+  def toStringGenomeBinary(a: Genome, groupSizeOpt: Option[Int] = Some(8)): String = {
     val res = new StringBuilder()
-    for(i<- a.indices; b<- 0 until 8){
+    for (i <- a.indices; b <- 0 until 8) {
       res.append((a(i) >> b) & 1)
-      if((i * 8 + b) % groupSize == groupSize - 1) res.append(" ")
+      for (groupSize <- groupSizeOpt) {
+        if ((i * 8 + b) % groupSize == groupSize - 1) res.append(" ")
+      }
     }
     res.toString()
   }
 
-  def neuralNetFromGenome(g: Genome, str: NeuralNetStructure, bitsPerGene:Int = 8, conv: Int => Double): NeuralNet = {
+  def neuralNetFromGenome(g: Genome, str: NeuralNetStructure, bitsPerGene: Int = 8, conv: Int => Double): NeuralNet = {
     NeuralNet(str.layerSizes, toGenes(g, conv, bitsPerGene), str.activation)
   }
 }

@@ -11,21 +11,22 @@ import scala.util.Random
 
 
 case class GeneticSorterParams(
-                                playersOnMap: Int = 10,
+                                playersOnMap: Int = 20,
                                 spawnToReachTarget: Boolean = false,
-                                threads: Int = 4,
-                                generationSize: Int = 10 * 2,
+                                threads: Int = 9,
+                                generationSize: Int = 20 * 9,
                                 generationTicks: Int => Int = x => 300,
 
-                                passToNextGenerationCount: Int = 2 * 4,
-                                selectTopToMutatate: Int = 5 * 4,
+                                passToNextGenerationCount: Int = 3 * 9,
+                                selectTopToMutatate: Int = 5 * 9,
                                 flipBits: Int = 256,
+                                numCuts: Int = 8,
 
                                 wavesToRemember: Int = 25,
 
                                 neuralNetStructure: NeuralNetStructure =
                                 NeuralNetStructureImpl(IndexedSeq(
-                                  GameToNeuralOps.visionSize, 12,12, 2), logisticCurve),
+                                  GameToNeuralOps.visionSize, 12,12, 4), logisticCurve),
                                 bitPerGene: Int = 8,
                                 conv: Int => Double = x => (x - 128) / 128.0,
                                 playerVision: (Game, Int) => IndexedSeq[Double] = GameToNeuralOps.playerVision,
@@ -33,10 +34,10 @@ case class GeneticSorterParams(
                                 fitnessFunction: (Game, Int) => Double = GameToNeuralOps.fitnessFunction,
 
                                 gameParams: GameParams = GameParams(area = V2(256, 256),
-                                  initialFood = 10,
-                                  maxFood = 10,
+                                  initialFood = 20,
+                                  maxFood = 20,
                                   foodPerTick = 0.4,
-                                  initialSize = 10d,
+                                  initialSize = 25d,
                                   sizePerFood = 10d,
                                   dSizePerTick = 0.01,
 
@@ -136,7 +137,7 @@ class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterPar
         val r = new Random()
 
         val newGenomes = (for (i <- 0 until (params.generationSize - params.passToNextGenerationCount))
-          yield GenomeOps.mix(topGenomes(r.nextInt(topGenomes.size)), topGenomes(r.nextInt(topGenomes.size)))).map(GenomeOps.flipRandomBits(_, r.nextInt(params.flipBits)))
+          yield GenomeOps.mix(topGenomes(r.nextInt(topGenomes.size)), topGenomes(r.nextInt(topGenomes.size)), params.numCuts)).map(GenomeOps.flipRandomBits(_, r.nextInt(params.flipBits)))
 
         val shuffled = new Random().shuffle(topToNextWave ++ newGenomes)
 
@@ -149,7 +150,7 @@ class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterPar
   val gameFieldX = 10
   val gameFieldY = 40
   val gameFieldPadding = 20
-  val gameFieldTotalWH = 700
+  val gameFieldTotalWH = 1000
 
   val gameFieldSize = gameFieldTotalWH
   val gameFieldScale = gameFieldSize / params.gameParams.area.x
@@ -211,7 +212,7 @@ class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterPar
     if (selectedPlayerId.nonEmpty) {
       currentWaves(selectedPlayerWave).players.find(_.pId == selectedPlayerId.get) match
         case Some(p) =>
-          NeuralNetDrawer.draw(p.neuralNet, 700, 200, 600, 500, g)
+          NeuralNetDrawer.draw(p.neuralNet, 1000, 500, 600, 500, g)
         case None =>
     }
   }
@@ -287,7 +288,7 @@ class ConcurrentGeneticSorter(val params: GeneticSorterParams = GeneticSorterPar
         val r = new Random()
         val nextWaveGenomes = topGenomes.take(params.passToNextGenerationCount) ++
           (for (i <- 0 until (params.generationSize - params.passToNextGenerationCount))
-            yield GenomeOps.mix(topGenomes(r.nextInt(topGenomes.size)), topGenomes(r.nextInt(topGenomes.size)))).map(GenomeOps.flipRandomBits(_, r.nextInt(64)))
+            yield GenomeOps.mix(topGenomes(r.nextInt(topGenomes.size)), topGenomes(r.nextInt(topGenomes.size)), params.numCuts)).map(GenomeOps.flipRandomBits(_, r.nextInt(64)))
         waves = waves :+ new Wave(s"wave: ${waves.size}", params, nextWaveGenomes)
       }
       if (sleep > 0) Thread.sleep(sleep)

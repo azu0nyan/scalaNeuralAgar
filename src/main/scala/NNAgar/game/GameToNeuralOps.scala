@@ -10,7 +10,7 @@ object GameToNeuralOps {
 
   val visionSectors = 8
 
-  val visionSize = visionSectors * 2 + 1
+  val visionSize = visionSectors * 5 + 1
   val baseVisionDistance = 115
   val maxVisionDistance: Player =>  Double =  p => p.rad + baseVisionDistance
   val maxSize: Double = 1000
@@ -111,19 +111,19 @@ object GameToNeuralOps {
 
       Seq(
         1 - collisionDist.map(c => (c - p.rad) / baseVisionDistance).getOrElse(1d),
-//        1 - enemyDist,
-//        if(enemySize < p.size) 0 else 1 ,
+        1 - enemyDist,
+        if(enemySize < p.size) 0 else 1 ,
         1 - foodDist,
-//        math.min(0d, foodSize / 5d)
+        math.min(1d, foodSize / 5d)
       )
     }
 
     val sd = sectorsData.flatten.toIndexedSeq
 
-    val reordered = for(param <- Seq(Seq(0), Seq(1));
+    val reordered = for(param <- Seq(Seq(0), Seq(1, 2), Seq(3, 4));
         s <- 0 until visionSectors;
         p <- param
-        ) yield sd(2 * s + p)
+        ) yield sd(5 * s + p)
 
     reordered.toIndexedSeq ++ IndexedSeq(p.size / maxSize)
 //    val res =  (sectorsData.flatten.toIndexedSeq) ++ IndexedSeq(
@@ -143,8 +143,8 @@ object GameToNeuralOps {
   }
 
   def playerControl(gi: GameInstance, pId: Int, act: IndexedSeq[Double]): Unit = {
-    val dir = V2(act(0) - act(1), 1) .capLength(1.0)
-//    val dir = V2(act(0) - act(1), act(2) - act(3)) .capLength(1.0)
+//    val dir = V2(act(0) - act(1), 1) .capLength(1.0)
+    val dir = V2(act(0) - act(1), act(2) - act(3)) .capLength(1.0)
    // println(act.toString() + " " + dir)
 //    val dir = gi.player(pId).dir.rotate(act(0) - act(1))
     gi.setMoveDirection(dir, pId)
