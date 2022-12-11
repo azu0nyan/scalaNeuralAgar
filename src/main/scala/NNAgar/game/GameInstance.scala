@@ -67,7 +67,7 @@ class GameInstance(p: GameParams = GameParams()) {
       math.max(0d, math.min(gameData.params.area.x, max.x)),
       math.max(0d, math.min(gameData.params.area.y, max.y))
     )
-    gameData = gameData.copy(obstacles = gameData.obstacles :+ Obstacle(cMin, cMax))
+    gameData = gameData.copy(obstaclesAdd = gameData.obstaclesAdd :+ Obstacle(cMin, cMax))
   }
 
   def spawnPlayer(): Int = {
@@ -120,18 +120,19 @@ class GameInstance(p: GameParams = GameParams()) {
     val (newAliveT, newDeadT) = af
       .map { p =>
         //        val tryPos = p.pos + p.dir * gameData.params.tickTime * gameData.params.speed(p.size)//x,y movement
+
         val rotationAngle = gameData.params.angleSpeedMax * gameData.params.tickTime * math.max(-1d, math.min(1d, p.controlDir.x))
         val newLookDir = p.lookDir.rotate(rotationAngle)
-
         val speedControl = math.max(-1d, math.min(1d, p.controlDir.y))
         val tryPosQ = p.pos + newLookDir * gameData.params.tickTime * gameData.params.speed(p.size) * (if (speedControl > 0) speedControl else speedControl * 0.70) //dir = lr, speed
+
         val tryObstaclePos = gameData.obstacles.flatMap(_.intersection(p.pos, tryPosQ)).minByOption(v => (v - p.pos).length) match
           case Some(value) => value + (p.pos - value) * 0.01///p.pos + (value - p.pos) * 0.99 //clamp toOuter
           case None => tryPosQ
 
         val newPos = V2(math.max(0, math.min(gameData.params.area.x, tryObstaclePos.x)), math.max(0, math.min(gameData.params.area.y, tryObstaclePos.y)))
         val dmgMovementDmg = (newPos - tryPosQ).length
-        val hitWallDmg = gameData.obstacles.map(_.distance(p.pos)).map(dist => p.rad - dist).filter(_  > 0).sum
+        val hitWallDmg = gameData.obstacles.map(_.distance(newPos)).map(dist => p.rad - dist).filter(_  > 0).sum
 
         p.copy(
           pos = newPos,
@@ -170,7 +171,7 @@ class GameInstance(p: GameParams = GameParams()) {
     gr.fillRect(x.toInt, y.toInt, (scale * gameData.params.area.x).toInt, (scale * gameData.params.area.y).toInt)
 
 
-    for (o <- gameData.obstacles) {
+    for (o <- gameData.obstaclesAdd) {
       gr.setStroke(new BasicStroke(2, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 10f, Array(1f, 1f), 0f))
       gr.setColor(new Color(70, 70, 70))
       gr.drawRect((x + o.min.x * scale).toInt, (y + o.min.y * scale).toInt, (o.width * scale).toInt, (o.height * scale).toInt)

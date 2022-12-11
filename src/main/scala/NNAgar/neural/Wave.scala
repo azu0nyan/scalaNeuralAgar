@@ -35,9 +35,10 @@ class Wave(val name:String,val  params: GeneticSorterParams,val  genomes: Seq[Ge
   def topGenomes: Seq[Genome] = topPlayers.map(_.genome).distinct
 
   def topPlayers: Seq[NeuralPlayer] = {
-    val data = gameInstance.gameData
-    players.sortBy(p => -GameToNeuralOps.fitnessFunction(data, p.pId))
+    players.sortBy(p => -GameToNeuralOps.fitnessFunction( gameInstance.gameData, p.pId))
   }
+
+  def playersZipFitness:Seq[(NeuralPlayer, Double)] = players.map(p => (p, GameToNeuralOps.fitnessFunction( gameInstance.gameData, p.pId) ) )
 
   def maxFitness: Double = GameToNeuralOps.fitnessFunction(gameInstance.gameData, topPlayers.head.pId)
 

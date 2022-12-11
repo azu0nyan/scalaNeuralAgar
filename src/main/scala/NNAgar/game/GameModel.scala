@@ -35,7 +35,7 @@ object GameModel {
                     eatenFood: Double = 0,
                     distanceTraveled: Double = 0) {
 
-    def rad: Double = math.sqrt(size)
+    def rad: Double = math.sqrt(size) + 2
 
     def contains(v: V2): Boolean = (pos - v).length < rad
 
@@ -89,7 +89,7 @@ object GameModel {
   }
 
   case class Game(params: GameParams = GameParams(),
-                  obstacles: Seq[Obstacle] = Seq(),
+                  obstaclesAdd: Seq[Obstacle] = Seq(),
                   alivePlayers: Seq[Player] = Seq(),
                   food: Seq[V2] = Seq(),
                   tick: Int = 0,
@@ -105,6 +105,8 @@ object GameModel {
         Obstacle(V2(params.area.x, 0), V2(params.area.x + 100, params.area.y)),
         Obstacle(V2(0, params.area.y), V2(params.area.x, params.area.y + 100)),
       )
+      
+    def obstacles: Seq[Obstacle] = border ++ obstaclesAdd  
   }
 
 
